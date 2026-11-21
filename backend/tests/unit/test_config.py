@@ -38,6 +38,10 @@ def test_relative_model_overrides_resolve_from_configured_project_root(tmp_path)
         {"OFFLINE_FACE_DETECTION_SCORE_THRESHOLD": "-0.01"},
         {"OFFLINE_FACE_DETECTION_NMS_THRESHOLD": "-0.2"},
         {"OFFLINE_FACE_DETECTION_TOP_K": "0"},
+        {"OFFLINE_FACE_MAX_UPLOAD_BYTES": "0"},
+        {"OFFLINE_FACE_MAX_IMAGE_WIDTH": "0"},
+        {"OFFLINE_FACE_MAX_IMAGE_HEIGHT": "0"},
+        {"OFFLINE_FACE_MAX_IMAGE_PIXELS": "0"},
         {"OFFLINE_FACE_UNSUPPORTED_SETTING": "value"},
     ],
 )
@@ -54,3 +58,24 @@ def test_provisional_yunet_settings_are_the_approved_values():
     assert settings.detection_top_k == 5000
     assert not hasattr(settings, "matching_threshold")
     assert not hasattr(settings, "ambiguity_margin")
+
+
+def test_image_limits_have_configurable_defaults_and_environment_overrides():
+    defaults = Settings.from_environment(environ={})
+    assert defaults.max_upload_bytes == 20 * 1024 * 1024
+    assert defaults.max_image_width == 12_000
+    assert defaults.max_image_height == 12_000
+    assert defaults.max_image_pixels == 40_000_000
+
+    configured = Settings.from_environment(
+        environ={
+            "OFFLINE_FACE_MAX_UPLOAD_BYTES": "1024",
+            "OFFLINE_FACE_MAX_IMAGE_WIDTH": "640",
+            "OFFLINE_FACE_MAX_IMAGE_HEIGHT": "480",
+            "OFFLINE_FACE_MAX_IMAGE_PIXELS": "300000",
+        }
+    )
+    assert configured.max_upload_bytes == 1024
+    assert configured.max_image_width == 640
+    assert configured.max_image_height == 480
+    assert configured.max_image_pixels == 300_000

@@ -33,6 +33,10 @@ class Settings(BaseModel):
     detection_score_threshold: float = Field(default=0.85, ge=0.0, le=1.0)
     detection_nms_threshold: float = Field(default=0.30, ge=0.0, le=1.0)
     detection_top_k: PositiveInt = 5000
+    max_upload_bytes: PositiveInt = 20 * 1024 * 1024
+    max_image_width: PositiveInt = 12_000
+    max_image_height: PositiveInt = 12_000
+    max_image_pixels: PositiveInt = 40_000_000
 
     @classmethod
     def from_environment(cls, environ: Mapping[str, str] | None = None) -> Settings:
@@ -45,6 +49,10 @@ class Settings(BaseModel):
             "OFFLINE_FACE_DETECTION_SCORE_THRESHOLD",
             "OFFLINE_FACE_DETECTION_NMS_THRESHOLD",
             "OFFLINE_FACE_DETECTION_TOP_K",
+            "OFFLINE_FACE_MAX_UPLOAD_BYTES",
+            "OFFLINE_FACE_MAX_IMAGE_WIDTH",
+            "OFFLINE_FACE_MAX_IMAGE_HEIGHT",
+            "OFFLINE_FACE_MAX_IMAGE_PIXELS",
         }
         unknown_names = {
             name
@@ -72,6 +80,10 @@ class Settings(BaseModel):
             "detection_score_threshold": env.get("OFFLINE_FACE_DETECTION_SCORE_THRESHOLD", 0.85),
             "detection_nms_threshold": env.get("OFFLINE_FACE_DETECTION_NMS_THRESHOLD", 0.30),
             "detection_top_k": env.get("OFFLINE_FACE_DETECTION_TOP_K", 5000),
+            "max_upload_bytes": env.get("OFFLINE_FACE_MAX_UPLOAD_BYTES", 20 * 1024 * 1024),
+            "max_image_width": env.get("OFFLINE_FACE_MAX_IMAGE_WIDTH", 12_000),
+            "max_image_height": env.get("OFFLINE_FACE_MAX_IMAGE_HEIGHT", 12_000),
+            "max_image_pixels": env.get("OFFLINE_FACE_MAX_IMAGE_PIXELS", 40_000_000),
         }
         # Let Pydantic produce the same typed extra-field error used for the
         # rest of the settings contract when an OFFLINE_FACE_* name is mistyped.

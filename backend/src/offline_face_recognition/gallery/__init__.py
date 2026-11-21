@@ -1,0 +1,1 @@
+"""Reference gallery identity responsibilities."""
