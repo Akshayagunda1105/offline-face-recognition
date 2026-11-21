@@ -72,5 +72,5 @@ Act as a senior Python and AI/ML engineer. Help build a reliable, maintainable, 
 ## Current status
 
 - Workspace contains project documentation, Archify architecture artifacts, and setup files.
-- Backend Milestones 1–5 are implemented; application API endpoints, frontend, real-person validation and matching-threshold calibration remain pending.
+- Backend Milestones 1–6 are implemented; frontend integration, real-person validation and matching-threshold calibration remain pending. The normal recognition endpoint remains gated while thresholds are uncalibrated.
 - YuNet and SFace model setup and synthetic feasibility experiments are documented; recognition thresholds remain uncalibrated.

@@ -46,6 +46,8 @@ def test_relative_model_overrides_resolve_from_configured_project_root(tmp_path)
         {"OFFLINE_FACE_MAX_ACTIVE_GALLERY_SESSIONS": "0"},
         {"OFFLINE_FACE_MAX_GALLERY_UPLOAD_BYTES": "0"},
         {"OFFLINE_FACE_GALLERY_SESSION_TTL_SECONDS": "0"},
+        {"OFFLINE_FACE_MAX_CONCURRENT_PROCESSING": "0"},
+        {"OFFLINE_FACE_MAX_ANNOTATED_RESPONSE_BYTES": "0"},
         {"OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD": "0.5"},
         {"OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN": "0.1"},
         {
@@ -101,6 +103,8 @@ def test_gallery_session_and_threshold_defaults_and_overrides():
     assert defaults.max_active_gallery_sessions == 5
     assert defaults.max_gallery_upload_bytes == 100 * 1024 * 1024
     assert defaults.gallery_session_ttl_seconds == 1800
+    assert defaults.max_concurrent_processing == 1
+    assert defaults.max_annotated_response_bytes == 25 * 1024 * 1024
     assert defaults.matching_similarity_threshold is None
     assert defaults.matching_ambiguity_margin is None
 
@@ -110,6 +114,8 @@ def test_gallery_session_and_threshold_defaults_and_overrides():
             "OFFLINE_FACE_MAX_ACTIVE_GALLERY_SESSIONS": "3",
             "OFFLINE_FACE_MAX_GALLERY_UPLOAD_BYTES": "1048576",
             "OFFLINE_FACE_GALLERY_SESSION_TTL_SECONDS": "900",
+            "OFFLINE_FACE_MAX_CONCURRENT_PROCESSING": "2",
+            "OFFLINE_FACE_MAX_ANNOTATED_RESPONSE_BYTES": "1048576",
             "OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD": "0.61",
             "OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN": "0.12",
         }
@@ -118,5 +124,7 @@ def test_gallery_session_and_threshold_defaults_and_overrides():
     assert configured.max_active_gallery_sessions == 3
     assert configured.max_gallery_upload_bytes == 1_048_576
     assert configured.gallery_session_ttl_seconds == 900
+    assert configured.max_concurrent_processing == 2
+    assert configured.max_annotated_response_bytes == 1_048_576
     assert configured.matching_similarity_threshold == 0.61
     assert configured.matching_ambiguity_margin == 0.12

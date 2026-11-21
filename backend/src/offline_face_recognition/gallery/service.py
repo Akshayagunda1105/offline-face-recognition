@@ -11,6 +11,7 @@ from offline_face_recognition.gallery.session_store import (
     GallerySessionInfo,
     GallerySessionStore,
 )
+from offline_face_recognition.faces.engine import FaceEmbedding
 from offline_face_recognition.matching.matcher import (
     FaceMatcher,
     MatchDecision,
@@ -70,6 +71,27 @@ class GalleryService:
                 detection_index=detection_index,
                 policy=policy,
             )
+
+    def match_faces(
+        self,
+        session_id: str,
+        faces: Sequence[FaceEmbedding],
+        *,
+        policy: MatchPolicy | None = None,
+    ) -> tuple[MatchDecision, ...]:
+        """Match an image's faces under one session lease, preserving all indices."""
+        with self._session_store._borrow(session_id) as entries:
+            decisions = []
+            for face in faces:
+                decisions.append(
+                    self._matcher.match(
+                        face.embedding,
+                        entries,
+                        detection_index=face.detection.detection_index,
+                        policy=policy,
+                    )
+                )
+            return tuple(decisions)
 
     def purge_expired(self) -> int:
         return self._session_store.purge_expired()

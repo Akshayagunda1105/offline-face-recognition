@@ -41,6 +41,8 @@ class Settings(BaseModel):
     max_active_gallery_sessions: PositiveInt = 5
     max_gallery_upload_bytes: PositiveInt = 100 * 1024 * 1024
     gallery_session_ttl_seconds: PositiveInt = 30 * 60
+    max_concurrent_processing: PositiveInt = 1
+    max_annotated_response_bytes: PositiveInt = 25 * 1024 * 1024
     matching_similarity_threshold: float | None = Field(default=None, ge=-1.0, le=1.0)
     matching_ambiguity_margin: float | None = Field(default=None, ge=0.0, le=2.0)
 
@@ -73,6 +75,8 @@ class Settings(BaseModel):
             "OFFLINE_FACE_MAX_ACTIVE_GALLERY_SESSIONS",
             "OFFLINE_FACE_MAX_GALLERY_UPLOAD_BYTES",
             "OFFLINE_FACE_GALLERY_SESSION_TTL_SECONDS",
+            "OFFLINE_FACE_MAX_CONCURRENT_PROCESSING",
+            "OFFLINE_FACE_MAX_ANNOTATED_RESPONSE_BYTES",
             "OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD",
             "OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN",
         }
@@ -112,6 +116,10 @@ class Settings(BaseModel):
                 "OFFLINE_FACE_MAX_GALLERY_UPLOAD_BYTES", 100 * 1024 * 1024
             ),
             "gallery_session_ttl_seconds": env.get("OFFLINE_FACE_GALLERY_SESSION_TTL_SECONDS", 1800),
+            "max_concurrent_processing": env.get("OFFLINE_FACE_MAX_CONCURRENT_PROCESSING", 1),
+            "max_annotated_response_bytes": env.get(
+                "OFFLINE_FACE_MAX_ANNOTATED_RESPONSE_BYTES", 25 * 1024 * 1024
+            ),
             "matching_similarity_threshold": env.get("OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD"),
             "matching_ambiguity_margin": env.get("OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN"),
         }
