@@ -72,5 +72,5 @@ Act as a senior Python and AI/ML engineer. Help build a reliable, maintainable, 
 ## Current status
 
 - Workspace contains project documentation, Archify architecture artifacts, and setup files.
-- No implementation has started.
-- Technology choices are provisional until the relevant research and tests are complete.
+- Milestone 1 backend foundation is implemented; remaining application implementation and experiments are pending.
+- YuNet and SFace model setup and synthetic feasibility experiments are documented; recognition thresholds remain uncalibrated.

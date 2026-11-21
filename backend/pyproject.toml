@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "offline-face-recognition-backend"
+version = "0.1.0"
+description = "Offline, CPU-first face-recognition backend foundation"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi==0.165.0",
+    "numpy==2.5.5",
+    "opencv-python-headless==5.1.0.95",
+    "pillow==13.0.0",
+    "pydantic==2.14.4",
+    "python-multipart==0.0.34",
+    "uvicorn==0.54.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "httpx==0.28.1",
+    "pytest==9.2.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
