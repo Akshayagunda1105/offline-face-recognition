@@ -37,6 +37,7 @@ class Settings(BaseModel):
     max_image_width: PositiveInt = 12_000
     max_image_height: PositiveInt = 12_000
     max_image_pixels: PositiveInt = 40_000_000
+    max_detection_dimension: PositiveInt = 1200
     max_gallery_identities: int = Field(default=50, ge=1, le=50)
     max_active_gallery_sessions: PositiveInt = 5
     max_gallery_upload_bytes: PositiveInt = 100 * 1024 * 1024
@@ -71,6 +72,7 @@ class Settings(BaseModel):
             "OFFLINE_FACE_MAX_IMAGE_WIDTH",
             "OFFLINE_FACE_MAX_IMAGE_HEIGHT",
             "OFFLINE_FACE_MAX_IMAGE_PIXELS",
+            "OFFLINE_FACE_MAX_DETECTION_DIMENSION",
             "OFFLINE_FACE_MAX_GALLERY_IDENTITIES",
             "OFFLINE_FACE_MAX_ACTIVE_GALLERY_SESSIONS",
             "OFFLINE_FACE_MAX_GALLERY_UPLOAD_BYTES",
@@ -110,6 +112,7 @@ class Settings(BaseModel):
             "max_image_width": env.get("OFFLINE_FACE_MAX_IMAGE_WIDTH", 12_000),
             "max_image_height": env.get("OFFLINE_FACE_MAX_IMAGE_HEIGHT", 12_000),
             "max_image_pixels": env.get("OFFLINE_FACE_MAX_IMAGE_PIXELS", 40_000_000),
+            "max_detection_dimension": env.get("OFFLINE_FACE_MAX_DETECTION_DIMENSION", 1200),
             "max_gallery_identities": env.get("OFFLINE_FACE_MAX_GALLERY_IDENTITIES", 50),
             "max_active_gallery_sessions": env.get("OFFLINE_FACE_MAX_ACTIVE_GALLERY_SESSIONS", 5),
             "max_gallery_upload_bytes": env.get(

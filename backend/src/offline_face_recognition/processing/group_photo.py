@@ -89,6 +89,11 @@ class GroupPhotoProcessor:
                     "Detected faces and embeddings are incomplete or misaligned",
                     code="face_embedding_misaligned",
                 )
+            if any(face.detection.original_box is None for face in analysis.faces):
+                raise GroupPhotoProcessingError(
+                    "A detected face is missing original-image coordinates",
+                    code="original_coordinates_missing",
+                )
 
             decisions = self._gallery_service.match_faces(
                 session_id,
@@ -103,7 +108,7 @@ class GroupPhotoProcessor:
             identifications = tuple(
                 Identification(
                     detection_index=decision.detection_index,
-                    box=face.detection.clipped_box,
+                    box=face.detection.original_box,
                     status=decision.status,
                     identity_label=(
                         decision.identity_label

@@ -23,6 +23,9 @@ class FaceDetection:
     clipped_box: tuple[float, float, float, float]
     score: float
     detection_index: int = 0
+    # Box mapped to the original source image; raw_row/clipped_box remain in
+    # the detector working-image coordinate frame used by SFace alignment.
+    original_box: tuple[float, float, float, float] | None = None
 
     @property
     def landmarks(self) -> tuple[tuple[float, float], ...]:

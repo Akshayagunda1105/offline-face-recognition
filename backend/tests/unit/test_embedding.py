@@ -139,6 +139,88 @@ def test_engine_fails_with_detection_index_instead_of_skipping_embedding_failure
         engine.analyze(np.zeros((64, 96, 3), np.uint8))
 
 
+def test_engine_resizes_for_detection_and_alignment_maps_boxes_and_preserves_order():
+    first = np.asarray(_face().raw_row, dtype=np.float32)
+    first[:4] = (100, 50, 40, 30)
+    invalid = first.copy()
+    invalid[4] = np.nan
+    third = first.copy()
+    third[:4] = (500, 200, 60, 40)
+
+    class TrackingDetector:
+        def __init__(self):
+            self.size = None
+            self.image_shape = None
+            self.image_signature = None
+
+        def setInputSize(self, size):
+            self.size = size
+
+        def detect(self, image):
+            self.image_shape = image.shape
+            self.image_signature = int(image.sum())
+            return 3, np.stack([first, invalid, third])
+
+    class TrackingRecognizer(FakeRecognizer):
+        def __init__(self):
+            super().__init__()
+            self.image_shapes = []
+            self.image_signatures = []
+
+        def alignCrop(self, image, face_row):
+            self.image_shapes.append(image.shape)
+            self.image_signatures.append(int(image.sum()))
+            return super().alignCrop(image, face_row)
+
+    runtime = _runtime(TrackingRecognizer())
+    runtime.detector = TrackingDetector()
+    engine = FaceAnalysisEngine(runtime)
+    source = np.full((1200, 2401, 3), 77, dtype=np.uint8)
+    before = source.copy()
+
+    result = engine.analyze(source)
+
+    assert runtime.detector.size == (1200, 600)
+    assert runtime.detector.image_shape == (600, 1200, 3)
+    assert runtime.recognizer.image_shapes == [(600, 1200, 3), (600, 1200, 3)]
+    assert runtime.recognizer.image_signatures == [
+        runtime.detector.image_signature,
+        runtime.detector.image_signature,
+    ]
+    assert result.detections.rejected_detection_count == 1
+    assert [face.detection.detection_index for face in result.faces] == [0, 2]
+    assert result.faces[0].detection.raw_row == tuple(float(value) for value in first)
+    assert result.faces[1].detection.raw_row == tuple(float(value) for value in third)
+    assert result.faces[0].detection.clipped_box == (100.0, 50.0, 40.0, 30.0)
+    assert result.faces[0].detection.original_box == pytest.approx(
+        (100 * 2401 / 1200, 100, 40 * 2401 / 1200, 60)
+    )
+    assert result.faces[1].detection.original_box == pytest.approx(
+        (500 * 2401 / 1200, 400, 60 * 2401 / 1200, 80)
+    )
+    np.testing.assert_array_equal(source, before)
+
+
+def test_engine_does_not_resize_image_at_the_limit_or_mutate_it():
+    class TrackingDetector:
+        def setInputSize(self, _size):
+            pass
+
+        def detect(self, image):
+            assert image.shape == (600, 1200, 3)
+            return 0, None
+
+    runtime = _runtime(FakeRecognizer())
+    runtime.detector = TrackingDetector()
+    image = np.full((600, 1200, 3), 42, dtype=np.uint8)
+    before = image.copy()
+
+    result = FaceAnalysisEngine(runtime).analyze(image)
+
+    assert result.faces == ()
+    np.testing.assert_array_equal(image, before)
+
+
 def test_engine_rejects_runtime_without_both_loaded_models():
     runtime = _runtime(FakeRecognizer())
     runtime.detector = None

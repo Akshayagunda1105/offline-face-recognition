@@ -31,7 +31,13 @@ def _png_bytes():
 
 def _detection(index=0):
     row = tuple(float(value) for value in [10, 10, 20, 20, *([15, 15] * 5), 0.9])
-    return FaceDetection(row, (10.0, 10.0, 20.0, 20.0), 0.9, index)
+    return FaceDetection(
+        row,
+        (10.0, 10.0, 20.0, 20.0),
+        0.9,
+        index,
+        original_box=(10.0, 10.0, 20.0, 20.0),
+    )
 
 
 class FakeEngine:
@@ -82,6 +88,49 @@ def test_processor_returns_ordered_known_and_unknown_results_with_annotated_copy
     assert result.annotated_image_bgr.shape == (48, 64, 3)
     assert np.count_nonzero(result.annotated_image_bgr) > 0
     assert source_bytes == _png_bytes()
+    service.close()
+
+
+def test_processor_annotates_original_coordinate_box_when_engine_resized():
+    detection = _detection(4)
+    detection = FaceDetection(
+        detection.raw_row,
+        detection.clipped_box,
+        detection.score,
+        detection.detection_index,
+        original_box=(20.0, 24.0, 40.0, 44.0),
+    )
+    vector = np.eye(1, 128, 0, dtype=np.float32)[0]
+    engine = FakeEngine(FaceAnalysisResult(DetectionResult((detection,)), (FaceEmbedding(detection, vector.copy()),)))
+    processor, service, session_id = _processor(engine)
+
+    result = processor.process(session_id, "group.png", _png_bytes())
+
+    assert result.identifications[0].box == (20.0, 24.0, 40.0, 44.0)
+    service.close()
+
+
+def test_processor_rejects_face_without_original_coordinate_box():
+    valid_detection = _detection(4)
+    detection = FaceDetection(
+        valid_detection.raw_row,
+        valid_detection.clipped_box,
+        valid_detection.score,
+        valid_detection.detection_index,
+    )
+    vector = np.eye(1, 128, 0, dtype=np.float32)[0]
+    engine = FakeEngine(
+        FaceAnalysisResult(
+            DetectionResult((detection,)),
+            (FaceEmbedding(detection, vector.copy()),),
+        )
+    )
+    processor, service, session_id = _processor(engine)
+
+    with pytest.raises(GroupPhotoProcessingError) as error:
+        processor.process(session_id, "group.png", _png_bytes())
+
+    assert error.value.code == "original_coordinates_missing"
     service.close()
 
 
