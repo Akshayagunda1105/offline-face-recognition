@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "receiptId": "939b51c4-fbba-43c7-977d-06d21647f14c",
+  "receiptId": "b02726e9-3b6b-4055-b1b7-5a46417db053",
   "status": "current",
   "command": "deliver",
   "type": "architecture",
   "input": "C:\\Users\\aksha\\BLP TakeHome Assignment\\.archify\\architecture-offline-face-recognition-20261121-0124\\candidate.json",
   "output": "C:\\Users\\aksha\\BLP TakeHome Assignment\\.archify\\architecture-offline-face-recognition-20261121-0124\\offline-face-recognition.html",
   "specification": {
-    "sha256": "f9d21dde2dde46161e7114c4f6dad36d8c6e238da1e28bbd426819d05f0415e2",
-    "bytes": 6311
+    "sha256": "8683a856883f3092a03fbf059fa09e05a7c9ba1dc0c6e53f5f0f71faa58fce69",
+    "bytes": 6366
   },
   "artifact": {
-    "sha256": "0197e058f23ec09bf04d0ddd311ea855573ba83b775f8eeb2c6cc436fe3d84f0",
-    "bytes": 858483
+    "sha256": "097128fd9fa185d8af8915d1276f1a2be78a10bc5bc538425777caee3d0ec6e6",
+    "bytes": 858556
   }
 }

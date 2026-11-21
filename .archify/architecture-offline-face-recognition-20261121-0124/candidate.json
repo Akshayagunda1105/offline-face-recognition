@@ -45,7 +45,7 @@
       "type": "backend",
       "label": "YuNet",
       "sublabel": "Local face detector • CPU candidate",
-      "tag": "Pending validation",
+      "tag": "Synthetic test run",
       "pos": [840, 130],
       "size": [170, 78]
     },
@@ -62,7 +62,7 @@
       "type": "backend",
       "label": "SFace",
       "sublabel": "Local embedding model • CPU candidate",
-      "tag": "Pending validation",
+      "tag": "Synthetic test run",
       "pos": [1024, 355],
       "size": [170, 78]
     },
@@ -87,7 +87,7 @@
       "id": "unknown_rejection",
       "type": "backend",
       "label": "Unknown Rejection",
-      "sublabel": "Calibrated threshold + ambiguity rule",
+      "sublabel": "Threshold + ambiguity calibration pending",
       "pos": [795, 575],
       "size": [205, 78]
     },
@@ -244,8 +244,9 @@
       "dot": "amber",
       "title": "Proposed; not implemented",
       "items": [
-        "YuNet and SFace are candidates pending experimental validation",
-        "Recognition thresholds and ambiguity rule must be calibrated before use"
+        "YuNet and SFace synthetic feasibility experiments completed",
+        "Real-person validation and matcher-threshold calibration remain pending",
+        "Application implementation remains pending"
       ]
     }
   ]
