@@ -1,0 +1,7 @@
+﻿Model: face_recognition_sface_2021dec.onnx (FP32)
+Source: OpenCV Zoo, models/face_recognition_sface
+Pinned revision: 48b10fa505aeb51fbd127fc60a5c660040e823b7
+Model contribution: SFace by Yaoyao Zhong; ONNX conversion by Chengrui Wang.
+The OpenCV Zoo SFace model directory declares Apache License 2.0; see LICENSE.
+Source README: https://github.com/opencv/opencv_zoo/blob/48b10fa505aeb51fbd127fc60a5c660040e823b7/models/face_recognition_sface/README.md
+Model file: https://github.com/opencv/opencv_zoo/blob/48b10fa505aeb51fbd127fc60a5c660040e823b7/models/face_recognition_sface/face_recognition_sface_2021dec.onnx

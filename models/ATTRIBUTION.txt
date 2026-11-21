@@ -1,0 +1,11 @@
+YuNet face detector model attribution
+
+Model file: face_detection_yunet_2026may.onnx
+Distributed by: OpenCV Zoo, models/face_detection_yunet
+OpenCV Zoo revision: 47534e27c9851bb1128ccc0102f1145e27f23f98
+SHA-256: ebafce4e3c118d6554634be5c27ab333b4c047a9a8c3faf1d7cf93101c22f0f0
+Licence: MIT; see the adjacent LICENSE file. The pinned OpenCV Zoo README states that all files in its YuNet model directory are under the MIT License.
+Copyright notice in the model-directory licence: Copyright (c) 2020 Shiqi Yu.
+Upstream model source: https://github.com/ShiqiYu/libfacedetection.train/blob/a61a428929148171b488f024b5d6774f93cdbc13/tasks/task1/onnx/yunet.onnx
+OpenCV Zoo README: https://github.com/opencv/opencv_zoo/blob/47534e27c9851bb1128ccc0102f1145e27f23f98/models/face_detection_yunet/README.md
+Paper citation: Wei Wu, Hanyang Peng, and Shiqi Yu. “YuNet: A tiny millisecond-level face detector.” Machine Intelligence Research, 20(5):656–665, 2023.
