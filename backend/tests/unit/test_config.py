@@ -42,6 +42,20 @@ def test_relative_model_overrides_resolve_from_configured_project_root(tmp_path)
         {"OFFLINE_FACE_MAX_IMAGE_WIDTH": "0"},
         {"OFFLINE_FACE_MAX_IMAGE_HEIGHT": "0"},
         {"OFFLINE_FACE_MAX_IMAGE_PIXELS": "0"},
+        {"OFFLINE_FACE_MAX_GALLERY_IDENTITIES": "51"},
+        {"OFFLINE_FACE_MAX_ACTIVE_GALLERY_SESSIONS": "0"},
+        {"OFFLINE_FACE_MAX_GALLERY_UPLOAD_BYTES": "0"},
+        {"OFFLINE_FACE_GALLERY_SESSION_TTL_SECONDS": "0"},
+        {"OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD": "0.5"},
+        {"OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN": "0.1"},
+        {
+            "OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD": "1.1",
+            "OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN": "0.1",
+        },
+        {
+            "OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD": "0.5",
+            "OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN": "2.1",
+        },
         {"OFFLINE_FACE_UNSUPPORTED_SETTING": "value"},
     ],
 )
@@ -56,8 +70,8 @@ def test_provisional_yunet_settings_are_the_approved_values():
     assert settings.detection_score_threshold == 0.85
     assert settings.detection_nms_threshold == 0.30
     assert settings.detection_top_k == 5000
-    assert not hasattr(settings, "matching_threshold")
-    assert not hasattr(settings, "ambiguity_margin")
+    assert settings.matching_similarity_threshold is None
+    assert settings.matching_ambiguity_margin is None
 
 
 def test_image_limits_have_configurable_defaults_and_environment_overrides():
@@ -79,3 +93,30 @@ def test_image_limits_have_configurable_defaults_and_environment_overrides():
     assert configured.max_image_width == 640
     assert configured.max_image_height == 480
     assert configured.max_image_pixels == 300_000
+
+
+def test_gallery_session_and_threshold_defaults_and_overrides():
+    defaults = Settings.from_environment(environ={})
+    assert defaults.max_gallery_identities == 50
+    assert defaults.max_active_gallery_sessions == 5
+    assert defaults.max_gallery_upload_bytes == 100 * 1024 * 1024
+    assert defaults.gallery_session_ttl_seconds == 1800
+    assert defaults.matching_similarity_threshold is None
+    assert defaults.matching_ambiguity_margin is None
+
+    configured = Settings.from_environment(
+        environ={
+            "OFFLINE_FACE_MAX_GALLERY_IDENTITIES": "25",
+            "OFFLINE_FACE_MAX_ACTIVE_GALLERY_SESSIONS": "3",
+            "OFFLINE_FACE_MAX_GALLERY_UPLOAD_BYTES": "1048576",
+            "OFFLINE_FACE_GALLERY_SESSION_TTL_SECONDS": "900",
+            "OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD": "0.61",
+            "OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN": "0.12",
+        }
+    )
+    assert configured.max_gallery_identities == 25
+    assert configured.max_active_gallery_sessions == 3
+    assert configured.max_gallery_upload_bytes == 1_048_576
+    assert configured.gallery_session_ttl_seconds == 900
+    assert configured.matching_similarity_threshold == 0.61
+    assert configured.matching_ambiguity_margin == 0.12

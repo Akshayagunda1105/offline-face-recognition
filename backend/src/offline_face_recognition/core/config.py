@@ -6,7 +6,7 @@ import os
 from collections.abc import Mapping
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveInt
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt, model_validator
 
 
 def repository_root() -> Path:
@@ -22,7 +22,7 @@ def _resolve_configured_path(value: str | Path | None, *, root: Path, default: P
 
 
 class Settings(BaseModel):
-    """Runtime settings. Recognition thresholds are deliberately not defined here."""
+    """Validated runtime settings; matching thresholds stay unset until supplied."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -37,6 +37,22 @@ class Settings(BaseModel):
     max_image_width: PositiveInt = 12_000
     max_image_height: PositiveInt = 12_000
     max_image_pixels: PositiveInt = 40_000_000
+    max_gallery_identities: int = Field(default=50, ge=1, le=50)
+    max_active_gallery_sessions: PositiveInt = 5
+    max_gallery_upload_bytes: PositiveInt = 100 * 1024 * 1024
+    gallery_session_ttl_seconds: PositiveInt = 30 * 60
+    matching_similarity_threshold: float | None = Field(default=None, ge=-1.0, le=1.0)
+    matching_ambiguity_margin: float | None = Field(default=None, ge=0.0, le=2.0)
+
+    @model_validator(mode="after")
+    def validate_matching_settings_pair(self) -> Settings:
+        if (self.matching_similarity_threshold is None) != (
+            self.matching_ambiguity_margin is None
+        ):
+            raise ValueError(
+                "Matching similarity threshold and ambiguity margin must be set together"
+            )
+        return self
 
     @classmethod
     def from_environment(cls, environ: Mapping[str, str] | None = None) -> Settings:
@@ -53,6 +69,12 @@ class Settings(BaseModel):
             "OFFLINE_FACE_MAX_IMAGE_WIDTH",
             "OFFLINE_FACE_MAX_IMAGE_HEIGHT",
             "OFFLINE_FACE_MAX_IMAGE_PIXELS",
+            "OFFLINE_FACE_MAX_GALLERY_IDENTITIES",
+            "OFFLINE_FACE_MAX_ACTIVE_GALLERY_SESSIONS",
+            "OFFLINE_FACE_MAX_GALLERY_UPLOAD_BYTES",
+            "OFFLINE_FACE_GALLERY_SESSION_TTL_SECONDS",
+            "OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD",
+            "OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN",
         }
         unknown_names = {
             name
@@ -84,6 +106,14 @@ class Settings(BaseModel):
             "max_image_width": env.get("OFFLINE_FACE_MAX_IMAGE_WIDTH", 12_000),
             "max_image_height": env.get("OFFLINE_FACE_MAX_IMAGE_HEIGHT", 12_000),
             "max_image_pixels": env.get("OFFLINE_FACE_MAX_IMAGE_PIXELS", 40_000_000),
+            "max_gallery_identities": env.get("OFFLINE_FACE_MAX_GALLERY_IDENTITIES", 50),
+            "max_active_gallery_sessions": env.get("OFFLINE_FACE_MAX_ACTIVE_GALLERY_SESSIONS", 5),
+            "max_gallery_upload_bytes": env.get(
+                "OFFLINE_FACE_MAX_GALLERY_UPLOAD_BYTES", 100 * 1024 * 1024
+            ),
+            "gallery_session_ttl_seconds": env.get("OFFLINE_FACE_GALLERY_SESSION_TTL_SECONDS", 1800),
+            "matching_similarity_threshold": env.get("OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD"),
+            "matching_ambiguity_margin": env.get("OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN"),
         }
         # Let Pydantic produce the same typed extra-field error used for the
         # rest of the settings contract when an OFFLINE_FACE_* name is mistyped.

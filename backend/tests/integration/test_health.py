@@ -39,6 +39,9 @@ def test_health_reports_models_ready_but_recognition_not_ready():
         "recognition_ready": False,
         "reason": "matching_thresholds_not_calibrated",
     }
+    assert app.state.gallery_service is not None
+    assert app.state.model_runtime.recognition_ready is False
+    assert app.state.gallery_session_store.active_session_count == 0
 
 
 def test_health_reports_missing_models_and_keeps_liveness_available(tmp_path):
@@ -61,3 +64,5 @@ def test_health_reports_missing_models_and_keeps_liveness_available(tmp_path):
     }
     assert recognition.status_code == 503
     assert recognition.json()["recognition_ready"] is False
+    assert app.state.gallery_service is None
+    assert app.state.gallery_session_store.active_session_count == 0
