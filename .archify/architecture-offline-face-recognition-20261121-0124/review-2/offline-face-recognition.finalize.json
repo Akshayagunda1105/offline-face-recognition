@@ -1,0 +1,547 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "architecture",
+  "quality": "showcase",
+  "startedAt": "2026-11-20T20:03:10.555Z",
+  "specification": {
+    "path": "C:\\Users\\aksha\\BLP TakeHome Assignment\\.archify\\architecture-offline-face-recognition-20261121-0124\\candidate.json",
+    "sha256": "901a3966e2ee2ff2d9f074ba576d15b5a8ed8379b6124e8ba2c0c2c6f95e62dd",
+    "bytes": 6310
+  },
+  "artifact": {
+    "path": "C:\\Users\\aksha\\BLP TakeHome Assignment\\.archify\\architecture-offline-face-recognition-20261121-0124\\offline-face-recognition.html",
+    "sha256": "bfef4ad62d4d3bdc167e16ec5c476af64f898921abbebd0912340340d593a077",
+    "bytes": 858972
+  },
+  "stages": {
+    "validate": {
+      "status": "fail",
+      "exitCode": 1,
+      "durationMs": null,
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "C:\\Users\\aksha\\BLP TakeHome Assignment\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "architecture",
+        "C:\\Users\\aksha\\BLP TakeHome Assignment\\.archify\\architecture-offline-face-recognition-20261121-0124\\candidate.json",
+        "C:\\Users\\aksha\\BLP TakeHome Assignment\\.archify\\architecture-offline-face-recognition-20261121-0124\\offline-face-recognition.html",
+        "--quality",
+        "showcase",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": false,
+        "command": "deliver",
+        "receiptId": "32cef443-3a88-4cfa-ba12-f7559ca44054",
+        "stage": "render",
+        "type": "architecture",
+        "input": "C:\\Users\\aksha\\BLP TakeHome Assignment\\.archify\\architecture-offline-face-recognition-20261121-0124\\candidate.json",
+        "output": "C:\\Users\\aksha\\BLP TakeHome Assignment\\.archify\\architecture-offline-face-recognition-20261121-0124\\offline-face-recognition.html",
+        "error": "Architecture layout validation failed:\n- Label \"Display image + identifications\" overlaps component \"api\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [233, 160, 159, 14]\n  component \"api\" rect: [233, 130, 185, 74]\n  Suggested fix: set labelAt [313, 218] or set labelDx 1 with labelDy 0 (below); or set labelAt [313, 122] or set labelDx 1 with labelDy -96 (above)\n- [composition/label-route-clearance] showcase architecture label \"Reference images + filenames\" on connections[1] id \"reference-upload\" \"frontend\" -> \"api\" label \"Reference images + filenames\" is 0px from connections[2] id \"group-upload\" \"frontend\" -> \"api\" label \"Group photo upload\" segment 0 [346, 330] -> [346, 228] (label rect [275, 247, 144, 14]; minimum 4px) — if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"Reference images + filenames\" on connections[1] id \"reference-upload\" \"frontend\" -> \"api\" label \"Reference images + filenames\" is 0px from connections[14] id \"api-to-ui-results\" \"api\" -> \"frontend\" label \"Display image + identifications\" segment 2 [320.5, 228] -> [320.5, 306] (label rect [275, 247, 144, 14]; minimum 4px) — if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"Group photo upload\" on connections[2] id \"group-upload\" \"frontend\" -> \"api\" label \"Group photo upload\" is 0px from connections[1] id \"reference-upload\" \"frontend\" -> \"api\" label \"Reference images + filenames\" segment 0 [332, 330] -> [332, 267] (label rect [285, 254, 96, 14]; minimum 4px) — if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"Group photo upload\" on connections[2] id \"group-upload\" \"frontend\" -> \"api\" label \"Group photo upload\" is 0px from connections[14] id \"api-to-ui-results\" \"api\" -> \"frontend\" label \"Display image + identifications\" segment 2 [320.5, 228] -> [320.5, 306] (label rect [285, 254, 96, 14]; minimum 4px) — if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+        "diagnostics": [
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"Reference images + filenames\" on connections[1] id \"reference-upload\" \"frontend\" -> \"api\" label \"Reference images + filenames\" is 0px from connections[2] id \"group-upload\" \"frontend\" -> \"api\" label \"Group photo upload\" segment 0 [346, 330] -> [346, 228] (label rect [275, 247, 144, 14]; minimum 4px) — if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 1,
+              "id": "reference-upload",
+              "from": "frontend",
+              "to": "api"
+            },
+            "evidence": {
+              "label": "Reference images + filenames",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 2,
+                "id": "group-upload",
+                "from": "frontend",
+                "to": "api"
+              },
+              "segmentIndex": 0,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "reference-upload",
+                  "from": "frontend",
+                  "to": "api",
+                  "label": "Reference images + filenames"
+                },
+                "relationIndex": 1,
+                "label": "Reference images + filenames",
+                "x": 274.575,
+                "y": 247,
+                "width": 144.4,
+                "height": 14,
+                "lx": 346.775,
+                "ly": 257
+              },
+              "from": [
+                346,
+                330
+              ],
+              "to": [
+                346,
+                228
+              ]
+            },
+            "supportedFixes": [
+              "if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"Reference images + filenames\" on connections[1] id \"reference-upload\" \"frontend\" -> \"api\" label \"Reference images + filenames\" is 0px from connections[14] id \"api-to-ui-results\" \"api\" -> \"frontend\" label \"Display image + identifications\" segment 2 [320.5, 228] -> [320.5, 306] (label rect [275, 247, 144, 14]; minimum 4px) — if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 1,
+              "id": "reference-upload",
+              "from": "frontend",
+              "to": "api"
+            },
+            "evidence": {
+              "label": "Reference images + filenames",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 14,
+                "id": "api-to-ui-results",
+                "from": "api",
+                "to": "frontend"
+              },
+              "segmentIndex": 2,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "reference-upload",
+                  "from": "frontend",
+                  "to": "api",
+                  "label": "Reference images + filenames"
+                },
+                "relationIndex": 1,
+                "label": "Reference images + filenames",
+                "x": 274.575,
+                "y": 247,
+                "width": 144.4,
+                "height": 14,
+                "lx": 346.775,
+                "ly": 257
+              },
+              "from": [
+                320.5,
+                228
+              ],
+              "to": [
+                320.5,
+                306
+              ]
+            },
+            "supportedFixes": [
+              "if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"Group photo upload\" on connections[2] id \"group-upload\" \"frontend\" -> \"api\" label \"Group photo upload\" is 0px from connections[1] id \"reference-upload\" \"frontend\" -> \"api\" label \"Reference images + filenames\" segment 0 [332, 330] -> [332, 267] (label rect [285, 254, 96, 14]; minimum 4px) — if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 2,
+              "id": "group-upload",
+              "from": "frontend",
+              "to": "api"
+            },
+            "evidence": {
+              "label": "Group photo upload",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 1,
+                "id": "reference-upload",
+                "from": "frontend",
+                "to": "api"
+              },
+              "segmentIndex": 0,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "group-upload",
+                  "from": "frontend",
+                  "to": "api",
+                  "label": "Group photo upload",
+                  "labelDy": 46
+                },
+                "relationIndex": 2,
+                "label": "Group photo upload",
+                "x": 284.575,
+                "y": 254,
+                "width": 96.39999999999999,
+                "height": 14,
+                "lx": 332.775,
+                "ly": 264
+              },
+              "from": [
+                332,
+                330
+              ],
+              "to": [
+                332,
+                267
+              ]
+            },
+            "supportedFixes": [
+              "if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"Group photo upload\" on connections[2] id \"group-upload\" \"frontend\" -> \"api\" label \"Group photo upload\" is 0px from connections[14] id \"api-to-ui-results\" \"api\" -> \"frontend\" label \"Display image + identifications\" segment 2 [320.5, 228] -> [320.5, 306] (label rect [285, 254, 96, 14]; minimum 4px) — if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 2,
+              "id": "group-upload",
+              "from": "frontend",
+              "to": "api"
+            },
+            "evidence": {
+              "label": "Group photo upload",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 14,
+                "id": "api-to-ui-results",
+                "from": "api",
+                "to": "frontend"
+              },
+              "segmentIndex": 2,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "group-upload",
+                  "from": "frontend",
+                  "to": "api",
+                  "label": "Group photo upload",
+                  "labelDy": 46
+                },
+                "relationIndex": 2,
+                "label": "Group photo upload",
+                "x": 284.575,
+                "y": 254,
+                "width": 96.39999999999999,
+                "height": 14,
+                "lx": 332.775,
+                "ly": 264
+              },
+              "from": [
+                320.5,
+                228
+              ],
+              "to": [
+                320.5,
+                306
+              ]
+            },
+            "supportedFixes": [
+              "if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "layout/constraint",
+            "severity": "error",
+            "message": "Label \"Display image + identifications\" overlaps component \"api\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [233, 160, 159, 14]\n  component \"api\" rect: [233, 130, 185, 74]\n  Suggested fix: set labelAt [313, 218] or set labelDx 1 with labelDy 0 (below); or set labelAt [313, 122] or set labelDx 1 with labelDy -96 (above)",
+            "subject": {
+              "diagramType": "architecture"
+            },
+            "evidence": {},
+            "supportedFixes": []
+          }
+        ],
+        "provenance": "failed",
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      },
+      "execution": "embedded-in-deliver"
+    },
+    "deliver": {
+      "status": "not-run",
+      "execution": "blocked-by-validate"
+    }
+  },
+  "browserCheck": {
+    "requested": true,
+    "ran": false
+  },
+  "diagnostics": [
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"Reference images + filenames\" on connections[1] id \"reference-upload\" \"frontend\" -> \"api\" label \"Reference images + filenames\" is 0px from connections[2] id \"group-upload\" \"frontend\" -> \"api\" label \"Group photo upload\" segment 0 [346, 330] -> [346, 228] (label rect [275, 247, 144, 14]; minimum 4px) — if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 1,
+        "id": "reference-upload",
+        "from": "frontend",
+        "to": "api"
+      },
+      "evidence": {
+        "label": "Reference images + filenames",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 2,
+          "id": "group-upload",
+          "from": "frontend",
+          "to": "api"
+        },
+        "segmentIndex": 0,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "reference-upload",
+            "from": "frontend",
+            "to": "api",
+            "label": "Reference images + filenames"
+          },
+          "relationIndex": 1,
+          "label": "Reference images + filenames",
+          "x": 274.575,
+          "y": 247,
+          "width": 144.4,
+          "height": 14,
+          "lx": 346.775,
+          "ly": 257
+        },
+        "from": [
+          346,
+          330
+        ],
+        "to": [
+          346,
+          228
+        ]
+      },
+      "supportedFixes": [
+        "if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"Reference images + filenames\" on connections[1] id \"reference-upload\" \"frontend\" -> \"api\" label \"Reference images + filenames\" is 0px from connections[14] id \"api-to-ui-results\" \"api\" -> \"frontend\" label \"Display image + identifications\" segment 2 [320.5, 228] -> [320.5, 306] (label rect [275, 247, 144, 14]; minimum 4px) — if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 1,
+        "id": "reference-upload",
+        "from": "frontend",
+        "to": "api"
+      },
+      "evidence": {
+        "label": "Reference images + filenames",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 14,
+          "id": "api-to-ui-results",
+          "from": "api",
+          "to": "frontend"
+        },
+        "segmentIndex": 2,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "reference-upload",
+            "from": "frontend",
+            "to": "api",
+            "label": "Reference images + filenames"
+          },
+          "relationIndex": 1,
+          "label": "Reference images + filenames",
+          "x": 274.575,
+          "y": 247,
+          "width": 144.4,
+          "height": 14,
+          "lx": 346.775,
+          "ly": 257
+        },
+        "from": [
+          320.5,
+          228
+        ],
+        "to": [
+          320.5,
+          306
+        ]
+      },
+      "supportedFixes": [
+        "if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"Group photo upload\" on connections[2] id \"group-upload\" \"frontend\" -> \"api\" label \"Group photo upload\" is 0px from connections[1] id \"reference-upload\" \"frontend\" -> \"api\" label \"Reference images + filenames\" segment 0 [332, 330] -> [332, 267] (label rect [285, 254, 96, 14]; minimum 4px) — if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 2,
+        "id": "group-upload",
+        "from": "frontend",
+        "to": "api"
+      },
+      "evidence": {
+        "label": "Group photo upload",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 1,
+          "id": "reference-upload",
+          "from": "frontend",
+          "to": "api"
+        },
+        "segmentIndex": 0,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "group-upload",
+            "from": "frontend",
+            "to": "api",
+            "label": "Group photo upload",
+            "labelDy": 46
+          },
+          "relationIndex": 2,
+          "label": "Group photo upload",
+          "x": 284.575,
+          "y": 254,
+          "width": 96.39999999999999,
+          "height": 14,
+          "lx": 332.775,
+          "ly": 264
+        },
+        "from": [
+          332,
+          330
+        ],
+        "to": [
+          332,
+          267
+        ]
+      },
+      "supportedFixes": [
+        "if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"Group photo upload\" on connections[2] id \"group-upload\" \"frontend\" -> \"api\" label \"Group photo upload\" is 0px from connections[14] id \"api-to-ui-results\" \"api\" -> \"frontend\" label \"Display image + identifications\" segment 2 [320.5, 228] -> [320.5, 306] (label rect [285, 254, 96, 14]; minimum 4px) — if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 2,
+        "id": "group-upload",
+        "from": "frontend",
+        "to": "api"
+      },
+      "evidence": {
+        "label": "Group photo upload",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 14,
+          "id": "api-to-ui-results",
+          "from": "api",
+          "to": "frontend"
+        },
+        "segmentIndex": 2,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "group-upload",
+            "from": "frontend",
+            "to": "api",
+            "label": "Group photo upload",
+            "labelDy": 46
+          },
+          "relationIndex": 2,
+          "label": "Group photo upload",
+          "x": 284.575,
+          "y": 254,
+          "width": 96.39999999999999,
+          "height": 14,
+          "lx": 332.775,
+          "ly": 264
+        },
+        "from": [
+          320.5,
+          228
+        ],
+        "to": [
+          320.5,
+          306
+        ]
+      },
+      "supportedFixes": [
+        "if the authored labelDy are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "layout/constraint",
+      "severity": "error",
+      "message": "Label \"Display image + identifications\" overlaps component \"api\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [233, 160, 159, 14]\n  component \"api\" rect: [233, 130, 185, 74]\n  Suggested fix: set labelAt [313, 218] or set labelDx 1 with labelDy 0 (below); or set labelAt [313, 122] or set labelDx 1 with labelDy -96 (above)",
+      "subject": {
+        "diagramType": "architecture"
+      },
+      "evidence": {},
+      "supportedFixes": []
+    }
+  ],
+  "evidence": {
+    "receipt": "C:\\Users\\aksha\\BLP TakeHome Assignment\\.archify\\architecture-offline-face-recognition-20261121-0124\\review-2\\offline-face-recognition.finalize.json",
+    "summaryReceipt": "C:\\Users\\aksha\\BLP TakeHome Assignment\\.archify\\architecture-offline-face-recognition-20261121-0124\\review-2\\offline-face-recognition.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "failedStage": "validate",
+  "finishedAt": "2026-11-20T20:03:11.080Z",
+  "durationMs": 524,
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-20T07:47:49.031Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  }
+}

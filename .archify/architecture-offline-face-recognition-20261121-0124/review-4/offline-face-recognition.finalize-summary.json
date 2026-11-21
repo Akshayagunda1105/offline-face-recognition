@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Users\\aksha\\BLP TakeHome Assignment\\.archify\\architecture-offline-face-recognition-20261121-0124\\candidate.json",
+    "sha256": "f9d21dde2dde46161e7114c4f6dad36d8c6e238da1e28bbd426819d05f0415e2",
+    "bytes": 6311
+  },
+  "artifact": {
+    "path": "C:\\Users\\aksha\\BLP TakeHome Assignment\\.archify\\architecture-offline-face-recognition-20261121-0124\\offline-face-recognition.html",
+    "sha256": "0197e058f23ec09bf04d0ddd311ea855573ba83b775f8eeb2c6cc436fe3d84f0",
+    "bytes": 858483
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Users\\aksha\\BLP TakeHome Assignment\\.archify\\architecture-offline-face-recognition-20261121-0124\\review-4\\offline-face-recognition.finalize.json",
+    "summaryReceipt": "C:\\Users\\aksha\\BLP TakeHome Assignment\\.archify\\architecture-offline-face-recognition-20261121-0124\\review-4\\offline-face-recognition.finalize-summary.json",
+    "browserCheckReceipt": "C:\\Users\\aksha\\BLP TakeHome Assignment\\.archify\\architecture-offline-face-recognition-20261121-0124\\review-4\\offline-face-recognition.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-20T07:47:49.031Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 3345,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  },
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "resolvedCrossovers": 1,
+      "routesOverSuggestedBends": 2
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [
+        {
+          "left": {
+            "id": "reference-upload",
+            "from": "frontend",
+            "to": "api",
+            "label": "Reference images + filenames",
+            "collectionIndex": 1,
+            "artifactIndex": 2
+          },
+          "right": {
+            "id": "api-to-ui-results",
+            "from": "api",
+            "to": "frontend",
+            "label": "Display image + identifications",
+            "collectionIndex": 14,
+            "artifactIndex": 15
+          },
+          "point": [
+            416,
+            353
+          ],
+          "sharedNode": "frontend"
+        }
+      ],
+      "detours": [
+        {
+          "relationship": {
+            "id": "reference-upload",
+            "from": "frontend",
+            "to": "api",
+            "label": "Reference images + filenames",
+            "collectionIndex": 1,
+            "artifactIndex": 2
+          },
+          "bends": 3,
+          "stretch": 1.277
+        },
+        {
+          "relationship": {
+            "id": "rejection-to-annotator",
+            "from": "unknown_rejection",
+            "to": "annotator",
+            "label": "Known • unknown • uncertain",
+            "collectionIndex": 12,
+            "artifactIndex": 13
+          },
+          "bends": 3,
+          "stretch": 1.315
+        }
+      ],
+      "truncated": false
+    },
+    "hints": [
+      "frontend → api and api → frontend cross next to frontend: move node api or api so the two reach frontend from different sides (for example one level with it, one directly above or below it).",
+      "frontend → api needs 3 bends: move node frontend or api so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "unknown_rejection → annotator needs 3 bends: move node unknown_rejection or annotator so they share a row or column with matching centers, or sit diagonally with a clear corner."
+    ],
+    "repair": "Trace these relationships at the desktop viewport. For Architecture, use references/architecture-layout-repair.md: reflow a blocked main path or tangled connected scene, and repair an isolated defect locally only when the surrounding composition is accepted. Preserve all semantic content and user-fixed geometry. Rerun finalize once after the edit."
+  }
+}

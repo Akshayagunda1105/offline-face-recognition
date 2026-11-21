@@ -1,0 +1,252 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Proposed Offline Face Recognition",
+    "locale": "en",
+    "output": ".archify/architecture-offline-face-recognition-20261121-0124/offline-face-recognition.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "operator",
+      "type": "external",
+      "label": "User",
+      "sublabel": "Selects reference folder + group photo",
+      "pos": [40, 330],
+      "size": [160, 74]
+    },
+    {
+      "id": "frontend",
+      "type": "frontend",
+      "label": "React Frontend",
+      "sublabel": "Folder picker • upload • results",
+      "pos": [233, 330],
+      "size": [170, 74]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "FastAPI Backend",
+      "sublabel": "Validate requests • coordinate pipeline",
+      "pos": [440, 330],
+      "size": [185, 74]
+    },
+    {
+      "id": "gallery_builder",
+      "type": "backend",
+      "label": "Gallery Builder",
+      "sublabel": "Validate refs • derive labels from filenames",
+      "pos": [638, 130],
+      "size": [190, 78]
+    },
+    {
+      "id": "yunet",
+      "type": "backend",
+      "label": "YuNet",
+      "sublabel": "Local face detector • CPU candidate",
+      "tag": "Pending validation",
+      "pos": [840, 130],
+      "size": [170, 78]
+    },
+    {
+      "id": "alignment",
+      "type": "backend",
+      "label": "Face Alignment",
+      "sublabel": "Align crops from landmarks",
+      "pos": [1024, 130],
+      "size": [170, 78]
+    },
+    {
+      "id": "sface",
+      "type": "backend",
+      "label": "SFace",
+      "sublabel": "Local embedding model • CPU candidate",
+      "tag": "Pending validation",
+      "pos": [1024, 355],
+      "size": [170, 78]
+    },
+    {
+      "id": "session_store",
+      "type": "backend",
+      "label": "In-memory Session Store",
+      "sublabel": "Normalized embeddings → identity labels",
+      "tag": "Gallery session scope",
+      "pos": [1218, 355],
+      "size": [190, 86]
+    },
+    {
+      "id": "matcher",
+      "type": "backend",
+      "label": "Matcher",
+      "sublabel": "Rank identities by cosine similarity",
+      "pos": [1024, 575],
+      "size": [190, 78]
+    },
+    {
+      "id": "unknown_rejection",
+      "type": "backend",
+      "label": "Unknown Rejection",
+      "sublabel": "Calibrated threshold + ambiguity rule",
+      "pos": [795, 575],
+      "size": [205, 78]
+    },
+    {
+      "id": "annotator",
+      "type": "backend",
+      "label": "Image Annotator",
+      "sublabel": "Draw boxes + identity/status labels",
+      "pos": [564, 575],
+      "size": [205, 78]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Proposed local runtime • Windows CPU • offline",
+      "wraps": [
+        "frontend",
+        "api",
+        "gallery_builder",
+        "yunet",
+        "alignment",
+        "sface",
+        "session_store",
+        "matcher",
+        "unknown_rejection",
+        "annotator"
+      ],
+      "pad": 24
+    }
+  ],
+  "connections": [
+    {
+      "id": "user-to-ui",
+      "from": "operator",
+      "to": "frontend",
+      "label": "Choose folder + photo",
+      "variant": "emphasis"
+    },
+    {
+      "id": "reference-upload",
+      "from": "frontend",
+      "to": "api",
+      "label": "Reference images + filenames"
+    },
+    {
+      "id": "group-upload",
+      "from": "frontend",
+      "to": "api",
+      "label": "Group photo upload",
+      "labelDy": 46
+    },
+    {
+      "id": "api-to-gallery",
+      "from": "api",
+      "to": "gallery_builder",
+      "label": "Build gallery session",
+      "variant": "emphasis"
+    },
+    {
+      "id": "gallery-to-detect",
+      "from": "gallery_builder",
+      "to": "yunet",
+      "label": "Reference images"
+    },
+    {
+      "id": "api-to-group-detect",
+      "from": "api",
+      "to": "yunet",
+      "label": "Group photo",
+      "variant": "emphasis"
+    },
+    {
+      "id": "detect-to-align",
+      "from": "yunet",
+      "to": "alignment",
+      "label": "Face boxes + landmarks"
+    },
+    {
+      "id": "align-to-sface",
+      "from": "alignment",
+      "to": "sface",
+      "label": "Aligned face crops"
+    },
+    {
+      "id": "reference-embeddings-to-store",
+      "from": "sface",
+      "to": "session_store",
+      "label": "Normalized reference embeddings + labels",
+      "variant": "security"
+    },
+    {
+      "id": "query-embedding-to-matcher",
+      "from": "sface",
+      "to": "matcher",
+      "label": "Group-face embedding",
+      "variant": "emphasis"
+    },
+    {
+      "id": "gallery-to-matcher",
+      "from": "session_store",
+      "to": "matcher",
+      "label": "Session gallery embeddings",
+      "variant": "security"
+    },
+    {
+      "id": "matcher-to-rejection",
+      "from": "matcher",
+      "to": "unknown_rejection",
+      "label": "Ranked candidates + scores",
+      "variant": "emphasis"
+    },
+    {
+      "id": "rejection-to-annotator",
+      "from": "unknown_rejection",
+      "to": "annotator",
+      "label": "Known • unknown • uncertain"
+    },
+    {
+      "id": "annotator-to-api",
+      "from": "annotator",
+      "to": "api",
+      "label": "Annotated photo + results list",
+      "variant": "emphasis"
+    },
+    {
+      "id": "api-to-ui-results",
+      "from": "api",
+      "to": "frontend",
+      "label": "Display image + identifications",
+      "labelDy": -48,
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Offline deployment target",
+      "items": [
+        "Local frontend assets and local model files; no cloud API or runtime model download",
+        "Single Windows laptop, CPU-first; no database server initially"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Folder-agnostic gallery",
+      "items": [
+        "Identity labels derive from reference filenames",
+        "New folders rebuild the gallery; no identity-specific code or retraining",
+        "Reference embeddings stay in memory and are scoped to a gallery session"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Proposed; not implemented",
+      "items": [
+        "YuNet and SFace are candidates pending experimental validation",
+        "Recognition thresholds and ambiguity rule must be calibrated before use"
+      ]
+    }
+  ]
+}
