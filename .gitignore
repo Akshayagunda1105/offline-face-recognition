@@ -40,6 +40,7 @@ skills-lock.json
 *.local
 
 # Local, private, or generated datasets and recognition outputs
+/synthetic_dataset/
 /data/
 /datasets/
 /practice_data/
