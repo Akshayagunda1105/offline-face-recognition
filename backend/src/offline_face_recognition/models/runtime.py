@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+import threading
+from dataclasses import dataclass, field as dataclass_field
 from pathlib import Path
 from typing import Any, Callable
 
@@ -40,6 +41,8 @@ class ModelRuntime:
     detector: Any | None = None
     recognizer: Any | None = None
     error_code: str | None = None
+    detector_lock: threading.Lock = dataclass_field(default_factory=threading.Lock, init=False, repr=False)
+    recognizer_lock: threading.Lock = dataclass_field(default_factory=threading.Lock, init=False, repr=False)
 
     @property
     def readiness(self) -> ModelReadiness:
@@ -105,5 +108,7 @@ class ModelRuntime:
 
     def close(self) -> None:
         """Release references to model objects during startup recovery or shutdown."""
-        self.detector = None
-        self.recognizer = None
+        with self.detector_lock:
+            self.detector = None
+        with self.recognizer_lock:
+            self.recognizer = None
