@@ -97,7 +97,7 @@ def test_equal_top_scores_are_always_ambiguous_even_with_zero_margin():
     assert result.margin == pytest.approx(0.0, abs=1e-12)
 
 
-def test_margin_equal_to_configured_margin_is_accepted_and_one_identity_uses_score_only():
+def test_margin_boundary_is_inclusive_and_single_identity_gallery_is_rejected():
     matcher = FaceMatcher()
     ranking = RankedCandidates(
         detection_index=2,
@@ -113,10 +113,150 @@ def test_margin_equal_to_configured_margin_is_accepted_and_one_identity_uses_sco
 
     assert result.status is MatchStatus.KNOWN
     assert result.margin == 0.25
-    assert single.status is MatchStatus.KNOWN
+    assert single.status is MatchStatus.UNKNOWN
     assert single.runner_up is None
     assert single.margin is None
     assert single.detection_index == 9
+    assert single.rejection_reason is RejectionReason.INSUFFICIENT_GALLERY_IDENTITIES
+
+
+@pytest.mark.parametrize(
+    ("best", "runner_up", "expected_status", "expected_reason"),
+    [
+        (0.55, 0.40, MatchStatus.KNOWN, None),  # both conditions pass
+        (0.70, 0.65, MatchStatus.UNKNOWN, RejectionReason.AMBIGUOUS_TOP_CANDIDATES),
+        (0.39, 0.20, MatchStatus.UNKNOWN, RejectionReason.BELOW_SIMILARITY_THRESHOLD),
+        (0.39, 0.35, MatchStatus.UNKNOWN, RejectionReason.BELOW_SIMILARITY_THRESHOLD),
+    ],
+)
+def test_both_similarity_and_margin_conditions_are_required(
+    best, runner_up, expected_status, expected_reason
+):
+    ranking = RankedCandidates(
+        detection_index=5,
+        candidates=(
+            CandidateScore("top-key", "Top label", best),
+            CandidateScore("runner-key", "Runner label", runner_up),
+        ),
+    )
+
+    decision = FaceMatcher().decide(ranking, MatchPolicy(0.40, 0.10))
+
+    assert decision.status is expected_status
+    assert decision.rejection_reason is expected_reason
+    assert decision.detection_index == 5
+
+
+def test_similarity_and_margin_exact_boundaries_are_inclusive():
+    ranking = RankedCandidates(
+        detection_index=0,
+        candidates=(
+            CandidateScore("asha", "Asha", 0.40),
+            CandidateScore("bela", "Bela", 0.30),
+        ),
+    )
+
+    decision = FaceMatcher().decide(ranking, MatchPolicy(0.40, 0.10))
+
+    assert decision.status is MatchStatus.KNOWN
+    assert decision.identity_key == "asha"
+    assert decision.margin == pytest.approx(0.10)
+
+
+def test_high_similarity_and_large_margin_unknown_like_probe_is_not_rejected_by_this_policy():
+    # Similarity alone cannot reveal that a query is actually an unknown person.
+    # Such a probe passing both policy checks demonstrates the open-set limitation.
+    ranking = RankedCandidates(
+        detection_index=1,
+        candidates=(
+            CandidateScore("nearest", "Nearest gallery identity", 0.91),
+            CandidateScore("runner-up", "Runner-up identity", 0.20),
+        ),
+    )
+
+    decision = FaceMatcher().decide(ranking, MatchPolicy(0.40, 0.10))
+
+    assert decision.status is MatchStatus.KNOWN
+    assert decision.identity_label == "Nearest gallery identity"
+
+
+def test_identity_label_remains_attached_to_its_score_after_ranking():
+    query = np.zeros(128, dtype=np.float32)
+    query[0] = np.float32(0.6)
+    query[1] = np.float32(0.8)
+    gallery = [
+        Candidate("second", "Second identity", _unit(1)),
+        Candidate("first", "First identity", _unit(0)),
+    ]
+
+    ranking = FaceMatcher().rank(query, gallery, detection_index=2)
+
+    assert [(item.label, item.similarity) for item in ranking.candidates] == [
+        ("Second identity", pytest.approx(0.8)),
+        ("First identity", pytest.approx(0.6)),
+    ]
+
+
+@pytest.mark.parametrize(
+    "bad_score", [float("nan"), float("inf"), -1.01, 1.01, "not-a-score", True]
+)
+def test_decision_rejects_invalid_candidate_scores(bad_score):
+    ranking = RankedCandidates(
+        detection_index=0,
+        candidates=(CandidateScore("asha", "Asha", bad_score),),
+    )
+
+    with pytest.raises(MatchingError, match="invalid cosine similarity"):
+        FaceMatcher().decide(ranking, MatchPolicy(0.40, 0.10))
+
+
+def test_decision_rejects_unsorted_or_duplicate_candidate_rankings():
+    matcher = FaceMatcher()
+    policy = MatchPolicy(0.40, 0.10)
+    unsorted = RankedCandidates(
+        0,
+        (CandidateScore("asha", "Asha", 0.4), CandidateScore("bela", "Bela", 0.8)),
+    )
+    duplicate = RankedCandidates(
+        0,
+        (CandidateScore("asha", "Asha", 0.8), CandidateScore("asha", "Asha 2", 0.2)),
+    )
+
+    with pytest.raises(MatchingError, match="descending order"):
+        matcher.decide(unsorted, policy)
+    with pytest.raises(MatchingError, match="duplicate identity"):
+        matcher.decide(duplicate, policy)
+
+
+def test_configured_threshold_changes_match_decision_and_defaults_remain_unset():
+    permissive = Settings(
+        project_root=".",
+        yunet_model_path="yunet.onnx",
+        sface_model_path="sface.onnx",
+        matching_similarity_threshold=0.40,
+        matching_ambiguity_margin=0.10,
+    )
+    strict = Settings(
+        project_root=".",
+        yunet_model_path="yunet.onnx",
+        sface_model_path="sface.onnx",
+        matching_similarity_threshold=0.60,
+        matching_ambiguity_margin=0.10,
+    )
+    query = np.zeros(128, dtype=np.float32)
+    query[0] = np.float32(0.5)
+    query[1] = np.float32(0.2)
+    query[2] = np.float32(np.sqrt(0.71))
+    gallery = [_candidate("Asha", 0), _candidate("Bela", 1)]
+
+    assert FaceMatcher(permissive).match(query, gallery, detection_index=0).status is MatchStatus.KNOWN
+    assert FaceMatcher(strict).match(query, gallery, detection_index=0).status is MatchStatus.UNKNOWN
+
+    defaults = Settings.from_environment(environ={})
+    assert defaults.matching_similarity_threshold is None
+    assert defaults.matching_ambiguity_margin is None
+    with pytest.raises(MatchingThresholdsNotConfiguredError):
+        FaceMatcher(defaults).match(query, gallery, detection_index=0)
 
 
 def test_ranking_is_available_without_thresholds_but_decision_is_not():

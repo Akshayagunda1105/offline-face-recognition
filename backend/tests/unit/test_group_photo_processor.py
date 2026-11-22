@@ -63,20 +63,35 @@ def _analysis(vectors, *, rejected=0, indexes=None):
     return FaceAnalysisResult(DetectionResult(detections, rejected), faces)
 
 
-def _processor(engine, *, policy=MatchPolicy(0.8, 0.0)):
+def _processor(engine, *, policy=MatchPolicy(0.8, 0.0), annotator=None):
     settings = _settings()
     store = GallerySessionStore(settings)
-    info = store.create({"asha": ("Asha", np.eye(1, 128, 0, dtype=np.float32)[0])})
+    info = store.create(
+        {
+            "asha": ("Asha", np.eye(1, 128, 0, dtype=np.float32)[0]),
+            "bela": ("Bela", np.eye(1, 128, 1, dtype=np.float32)[0]),
+        }
+    )
     service = GalleryService(builder=object(), session_store=store, matcher=FaceMatcher(settings))
     return (
-        GroupPhotoProcessor(settings, engine, service, experimental_policy=policy),
+        GroupPhotoProcessor(
+            settings, engine, service, annotator, experimental_policy=policy
+        ),
         service,
         info.session_id,
     )
 
 
 def test_processor_returns_ordered_known_and_unknown_results_with_annotated_copy():
-    engine = FakeEngine(_analysis([np.eye(1, 128, 0, dtype=np.float32)[0], np.eye(1, 128, 1, dtype=np.float32)[0]], indexes=[2, 5]))
+    engine = FakeEngine(
+        _analysis(
+            [
+                np.eye(1, 128, 0, dtype=np.float32)[0],
+                np.eye(1, 128, 2, dtype=np.float32)[0],
+            ],
+            indexes=[2, 5],
+        )
+    )
     processor, service, session_id = _processor(engine)
     source_bytes = _png_bytes()
 
@@ -88,6 +103,30 @@ def test_processor_returns_ordered_known_and_unknown_results_with_annotated_copy
     assert result.annotated_image_bgr.shape == (48, 64, 3)
     assert np.count_nonzero(result.annotated_image_bgr) > 0
     assert source_bytes == _png_bytes()
+    service.close()
+
+
+def test_unknown_decision_is_rendered_as_unknown_without_identity_label():
+    class RecordingAnnotator:
+        def __init__(self):
+            self.annotations = None
+
+        def annotate(self, image, annotations):
+            self.annotations = tuple(annotations)
+            return image.copy()
+
+    vector = np.eye(1, 128, 2, dtype=np.float32)[0]
+    engine = FakeEngine(_analysis([vector]))
+    annotator = RecordingAnnotator()
+    processor, service, session_id = _processor(
+        engine, policy=MatchPolicy(0.8, 0.0), annotator=annotator
+    )
+
+    result = processor.process(session_id, "group.png", _png_bytes())
+
+    assert result.identifications[0].status is MatchStatus.UNKNOWN
+    assert result.identifications[0].identity_label is None
+    assert annotator.annotations[0].label == "Unknown"
     service.close()
 
 

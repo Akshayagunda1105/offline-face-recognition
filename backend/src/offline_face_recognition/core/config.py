@@ -22,7 +22,11 @@ def _resolve_configured_path(value: str | Path | None, *, root: Path, default: P
 
 
 class Settings(BaseModel):
-    """Validated runtime settings; matching thresholds stay unset until supplied."""
+    """Validated runtime settings; match policy must be explicitly configured.
+
+    Recognition readiness remains disabled until a policy is calibrated and
+    separately approved for normal recognition.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -49,6 +53,14 @@ class Settings(BaseModel):
 
     @model_validator(mode="after")
     def validate_matching_settings_pair(self) -> Settings:
+        explicitly_supplied = {
+            "matching_similarity_threshold",
+            "matching_ambiguity_margin",
+        } & self.model_fields_set
+        if len(explicitly_supplied) == 1:
+            raise ValueError(
+                "Matching similarity threshold and ambiguity margin must be set together"
+            )
         if (self.matching_similarity_threshold is None) != (
             self.matching_ambiguity_margin is None
         ):
@@ -123,8 +135,12 @@ class Settings(BaseModel):
             "max_annotated_response_bytes": env.get(
                 "OFFLINE_FACE_MAX_ANNOTATED_RESPONSE_BYTES", 25 * 1024 * 1024
             ),
-            "matching_similarity_threshold": env.get("OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD"),
-            "matching_ambiguity_margin": env.get("OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN"),
+            "matching_similarity_threshold": env.get(
+                "OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD"
+            ),
+            "matching_ambiguity_margin": env.get(
+                "OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN"
+            ),
         }
         # Let Pydantic produce the same typed extra-field error used for the
         # rest of the settings contract when an OFFLINE_FACE_* name is mistyped.

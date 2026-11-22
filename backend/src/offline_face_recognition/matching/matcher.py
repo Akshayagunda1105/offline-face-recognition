@@ -32,6 +32,7 @@ class MatchStatus(StrEnum):
 class RejectionReason(StrEnum):
     BELOW_SIMILARITY_THRESHOLD = "below_similarity_threshold"
     AMBIGUOUS_TOP_CANDIDATES = "ambiguous_top_candidates"
+    INSUFFICIENT_GALLERY_IDENTITIES = "insufficient_gallery_identities"
 
 
 class GalleryCandidate(Protocol):
@@ -164,13 +165,52 @@ class FaceMatcher:
         if not ranking.candidates:
             raise MatchingError("Cannot decide from an empty candidate ranking")
 
+        # Rankings are normally produced by rank(), but decide() is also a
+        # public boundary used by evaluation and tests. Validate externally
+        # supplied rankings before trusting their order or score values.
+        if ranking.detection_index < 0:
+            raise MatchingError("Detection index must be non-negative")
+        seen_keys: set[str] = set()
+        previous_similarity = math.inf
+        validated_candidates: list[CandidateScore] = []
+        for candidate in ranking.candidates:
+            if not candidate.identity_key or not candidate.label:
+                raise MatchingError("Ranked candidate must have a non-empty key and label")
+            if candidate.identity_key in seen_keys:
+                raise MatchingError("Ranking contains duplicate identity keys")
+            seen_keys.add(candidate.identity_key)
+            if isinstance(candidate.similarity, bool):
+                raise MatchingError("Ranking contains an invalid cosine similarity score")
+            try:
+                similarity = float(candidate.similarity)
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise MatchingError(
+                    "Ranking contains an invalid cosine similarity score"
+                ) from exc
+            if (
+                not math.isfinite(similarity)
+                or not -1.0 <= similarity <= 1.0
+            ):
+                raise MatchingError("Ranking contains an invalid cosine similarity score")
+            if similarity > previous_similarity:
+                raise MatchingError("Candidate scores must be sorted in descending order")
+            previous_similarity = similarity
+            validated_candidates.append(
+                CandidateScore(candidate.identity_key, candidate.label, similarity)
+            )
+        ranking = RankedCandidates(ranking.detection_index, tuple(validated_candidates))
+
         best = ranking.best
         runner_up = ranking.runner_up
         margin = ranking.margin
         reason: RejectionReason | None = None
         if best.similarity < active_policy.similarity_threshold:
             reason = RejectionReason.BELOW_SIMILARITY_THRESHOLD
-        elif runner_up is not None and (
+        elif runner_up is None:
+            # A one-identity gallery has no second score, so the required
+            # top-two margin cannot be established. Do not fall back to score-only.
+            reason = RejectionReason.INSUFFICIENT_GALLERY_IDENTITIES
+        elif (
             margin is None
             or math.isclose(margin, 0.0, rel_tol=0.0, abs_tol=1e-12)
             or margin < active_policy.ambiguity_margin
