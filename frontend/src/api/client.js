@@ -2,11 +2,12 @@ const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 export const API_BASE_URL = (configuredBaseUrl || "http://127.0.0.1:8000").replace(/\/$/, "");
 
 export class ApiError extends Error {
-  constructor(message, { status = null, code = null } = {}) {
+  constructor(message, { status = null, code = null, retryAfterSeconds = null } = {}) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -39,13 +40,25 @@ async function requestJson(path, { method = "GET", sessionId, body, allowUnavail
     const detail = data?.detail;
     throw new ApiError(
       detail?.message || detail?.code || `The backend request failed (${response.status}).`,
-      { status: response.status, code: detail?.code || null },
+      {
+        status: response.status,
+        code: detail?.code || null,
+        retryAfterSeconds: parseRetryAfter(response.headers.get("Retry-After")),
+      },
     );
   }
 
   // Readiness endpoints intentionally use HTTP 503 when unavailable. Keep
   // their response bodies so the UI can distinguish not-ready from offline.
   return { data, ok: response.ok, status: response.status };
+}
+
+function parseRetryAfter(value) {
+  if (!value) return null;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds;
+  const retryAt = Date.parse(value);
+  return Number.isNaN(retryAt) ? null : Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
 }
 
 export const healthApi = {
@@ -72,5 +85,16 @@ export const galleryApi = {
 
   deleteCurrent(sessionId) {
     return requestJson("/api/galleries/current", { method: "DELETE", sessionId });
+  },
+
+  async recognizeGroupPhoto(sessionId, file) {
+    const form = new FormData();
+    form.append("photo", file, file.name);
+    const result = await requestJson("/api/group-photos/recognize", {
+      method: "POST",
+      sessionId,
+      body: form,
+    });
+    return result.data;
   },
 };
