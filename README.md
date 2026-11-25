@@ -8,7 +8,7 @@ The FastAPI backend and React frontend workflows are implemented. YuNet/SFace fe
 
 Recognition is unavailable by default. When local models are ready, both matching values are configured, and explicit experimental opt-in is enabled, the application can return experimental Known/Unknown results. The health response continues to report `recognition_ready: false` and `calibrated: false`.
 
-The current real-person validation collection is reported by the project owner as 34 reference identities and 29 group photographs. The checked-in research record does not contain complete, independently verified ground truth and aggregate evaluation metrics for that current collection. Earlier local reports concern a smaller 21-reference/six-photo experiment; they are not evidence of current or general accuracy. No `EVALUATION.md` exists yet.
+The current real-person validation collection is reported by the project owner as 34 reference identities and 29 group photographs. The checked-in research record does not contain complete, independently verified ground truth and aggregate evaluation metrics for that current collection but verified all the results manually. Earlier local reports concern a smaller 21-reference/six-photo experiment; they are not evidence of current or general accuracy.
 
 ## Features
 
