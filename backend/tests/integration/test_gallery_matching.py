@@ -49,19 +49,21 @@ def test_local_synthetic_gallery_and_group_matching_pipeline():
         # This explicit policy exercises the code path only. It is not calibrated
         # and no identity correctness claim is made for the synthetic group image.
         experimental_policy = MatchPolicy(similarity_threshold=0.5, ambiguity_margin=0.05)
-        decisions = [
-            service.match_face(
-                gallery.session_id,
-                face.embedding,
-                detection_index=face.detection.detection_index,
-                policy=experimental_policy,
-            )
-            for face in group_analysis.faces
-        ]
+        decisions = service.match_faces(
+            gallery.session_id,
+            group_analysis.faces,
+            policy=experimental_policy,
+        )
 
         assert [decision.detection_index for decision in decisions] == list(range(8))
         assert all(not decision.calibrated for decision in decisions)
         assert all(np.isfinite(decision.best_candidate.similarity) for decision in decisions)
+        known_identity_keys = [
+            decision.identity_key
+            for decision in decisions
+            if decision.status.value == "Known"
+        ]
+        assert len(known_identity_keys) == len(set(known_identity_keys))
         assert store.delete(gallery.session_id)
         assert store.active_session_count == 0
     finally:

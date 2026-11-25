@@ -289,3 +289,155 @@ def test_match_policy_rejects_out_of_range_values():
         MatchPolicy(1.1, 0.1)
     with pytest.raises(MatchingError):
         MatchPolicy(0.5, 2.1)
+
+
+def _score_ranking(detection_index, scores):
+    return RankedCandidates(
+        detection_index,
+        tuple(
+            CandidateScore(identity.casefold(), identity, score)
+            for identity, score in sorted(scores.items(), key=lambda item: (-item[1], item[0].casefold()))
+        ),
+    )
+
+
+def test_batch_assignment_resolves_shared_top_identity_with_valid_alternative():
+    matcher = FaceMatcher()
+    rankings = [
+        _score_ranking(4, {"Akki": 0.72, "Bela": 0.40, "Chet": 0.10}),
+        _score_ranking(1, {"Akki": 0.65, "Bela": 0.60, "Chet": 0.20}),
+    ]
+
+    decisions = matcher.match_many(rankings, MatchPolicy(0.40, 0.10))
+
+    by_index = {decision.detection_index: decision for decision in decisions}
+    assert by_index[4].status is MatchStatus.KNOWN
+    assert by_index[4].identity_label == "Akki"
+    assert by_index[1].status is MatchStatus.KNOWN
+    assert by_index[1].identity_label == "Bela"
+    assert len({d.identity_key for d in decisions if d.status is MatchStatus.KNOWN}) == 2
+
+
+def test_batch_assignment_is_independent_of_detection_order():
+    matcher = FaceMatcher()
+    first = _score_ranking(9, {"Akki": 0.72, "Bela": 0.40, "Chet": 0.10})
+    second = _score_ranking(2, {"Akki": 0.65, "Bela": 0.60, "Chet": 0.20})
+    policy = MatchPolicy(0.40, 0.10)
+
+    forward = {d.detection_index: d.identity_key for d in matcher.match_many([first, second], policy)}
+    reverse = {d.detection_index: d.identity_key for d in matcher.match_many([second, first], policy)}
+
+    assert forward == reverse == {9: "akki", 2: "bela"}
+
+
+def test_higher_valid_claim_keeps_identity_even_when_lower_claim_has_alternative():
+    # A higher-scoring, independently policy-valid Akki claim owns Akki. A global
+    # cardinality optimizer must not hand Akki to the lower scorer just to add Bela.
+    rankings = [
+        _score_ranking(0, {"Akki": 0.75, "Bela": 0.60, "Chet": 0.10}),
+        _score_ranking(1, {"Akki": 0.70, "Bela": 0.20, "Chet": 0.10}),
+    ]
+
+    decisions = FaceMatcher().match_many(rankings, MatchPolicy(0.40, 0.10))
+
+    assert decisions[0].status is MatchStatus.KNOWN
+    assert decisions[0].identity_label == "Akki"
+    assert decisions[1].status is MatchStatus.UNKNOWN
+
+
+def test_equal_best_competing_claims_are_unknown_not_order_tiebroken():
+    ranking = _score_ranking(3, {"Akki": 0.70, "Bela": 0.10, "Chet": 0.05})
+    other = _score_ranking(8, {"Akki": 0.70, "Bela": 0.10, "Chet": 0.05})
+
+    decisions = FaceMatcher().match_many(
+        [ranking, other],
+        MatchPolicy(0.40, 0.10),
+    )
+    reversed_decisions = FaceMatcher().match_many(
+        [other, ranking], MatchPolicy(0.40, 0.10)
+    )
+
+    assert [decision.status for decision in decisions] == [MatchStatus.UNKNOWN, MatchStatus.UNKNOWN]
+    assert [decision.status for decision in reversed_decisions] == [
+        MatchStatus.UNKNOWN,
+        MatchStatus.UNKNOWN,
+    ]
+    assert all(
+        decision.rejection_reason is RejectionReason.AMBIGUOUS_GROUP_ASSIGNMENT
+        for decision in decisions
+    )
+
+
+def test_equal_global_optima_are_rejected_for_every_affected_face():
+    rankings = [
+        _score_ranking(0, {"Akki": 0.80, "Bela": 0.80, "Chet": 0.10}),
+        _score_ranking(1, {"Akki": 0.80, "Bela": 0.80, "Chet": 0.10}),
+    ]
+
+    decisions = FaceMatcher().match_many(rankings, MatchPolicy(0.40, 0.10))
+
+    assert [decision.status for decision in decisions] == [MatchStatus.UNKNOWN, MatchStatus.UNKNOWN]
+    assert all(
+        decision.rejection_reason is RejectionReason.AMBIGUOUS_GROUP_ASSIGNMENT
+        for decision in decisions
+    )
+
+
+def test_batch_assignment_preserves_unmatched_faces_as_unknown():
+    rankings = [
+        _score_ranking(0, {"Akki": 0.80, "Bela": 0.10, "Chet": 0.05}),
+        _score_ranking(1, {"Akki": 0.70, "Bela": 0.20, "Chet": 0.10}),
+    ]
+
+    decisions = FaceMatcher().match_many(rankings, MatchPolicy(0.40, 0.10))
+
+    assert decisions[0].status is MatchStatus.KNOWN
+    assert decisions[1].status is MatchStatus.UNKNOWN
+    assert decisions[1].identity_label is None
+
+
+def test_alternative_identity_is_unknown_when_fallback_margin_fails():
+    rankings = [
+        _score_ranking(0, {"Akki": 0.80, "Bela": 0.20, "Chet": 0.10}),
+        _score_ranking(1, {"Akki": 0.70, "Bela": 0.65, "Chet": 0.62}),
+    ]
+
+    decisions = FaceMatcher().match_many(rankings, MatchPolicy(0.40, 0.10))
+
+    assert decisions[0].status is MatchStatus.KNOWN
+    assert decisions[0].identity_label == "Akki"
+    assert decisions[1].status is MatchStatus.UNKNOWN
+
+
+def test_single_face_batch_matches_the_existing_single_face_policy():
+    matcher = FaceMatcher()
+    ranking = _score_ranking(6, {"Akki": 0.70, "Bela": 0.40, "Chet": 0.10})
+    policy = MatchPolicy(0.40, 0.10)
+
+    batch = matcher.match_many([ranking], policy)[0]
+    individual = matcher.decide(ranking, policy)
+
+    assert batch.status is individual.status is MatchStatus.KNOWN
+    assert batch.identity_key == individual.identity_key == "akki"
+    assert batch.best_candidate.similarity == individual.best_candidate.similarity
+    assert batch.margin == individual.margin
+
+
+def test_batch_policy_accepts_inclusive_threshold_and_margin_boundaries():
+    ranking = _score_ranking(0, {"Akki": 0.40, "Bela": 0.30, "Chet": 0.10})
+
+    decision = FaceMatcher().match_many([ranking], MatchPolicy(0.40, 0.10))[0]
+
+    assert decision.status is MatchStatus.KNOWN
+    assert decision.identity_key == "akki"
+    assert decision.margin == pytest.approx(0.10)
+
+
+def test_batch_matching_rejects_duplicate_detection_indices():
+    ranking = _score_ranking(4, {"Akki": 0.80, "Bela": 0.20, "Chet": 0.10})
+
+    with pytest.raises(MatchingError, match="duplicate detection indices"):
+        FaceMatcher().match_many(
+            [ranking, _score_ranking(4, {"Akki": 0.70, "Bela": 0.20, "Chet": 0.10})],
+            MatchPolicy(0.40, 0.10),
+        )

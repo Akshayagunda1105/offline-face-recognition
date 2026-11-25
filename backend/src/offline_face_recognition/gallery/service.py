@@ -90,17 +90,15 @@ class GalleryService:
     ) -> tuple[MatchDecision, ...]:
         """Match an image's faces under one session lease, preserving all indices."""
         with self._session_store._borrow(session_id) as entries:
-            decisions = []
-            for face in faces:
-                decisions.append(
-                    self._matcher.match(
-                        face.embedding,
-                        entries,
-                        detection_index=face.detection.detection_index,
-                        policy=policy,
-                    )
+            rankings = tuple(
+                self._matcher.rank(
+                    face.embedding,
+                    entries,
+                    detection_index=face.detection.detection_index,
                 )
-            return tuple(decisions)
+                for face in faces
+            )
+            return self._matcher.match_many(rankings, policy=policy)
 
     def purge_expired(self) -> int:
         return self._session_store.purge_expired()
