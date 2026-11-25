@@ -1,4 +1,4 @@
-# Offline Face Recognition
+# Task A – Who Is in the Photo? (Offline Face Recognition)
 
 A local application for creating a reference gallery from a user-selected folder and producing candidate identity labels for faces in a group photo. Reference filenames provide identity labels. The application is designed for CPU-first Windows use and performs inference with local ONNX files.
 
