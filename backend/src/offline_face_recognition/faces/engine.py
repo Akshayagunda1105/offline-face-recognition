@@ -39,26 +39,46 @@ class FaceAnalysisEngine:
         self._max_detection_dimension = runtime.settings.max_detection_dimension
 
     def analyze(self, image_bgr: np.ndarray) -> FaceAnalysisResult:
+        return self._analyze(image_bgr, reference_only=False)
+
+    def analyze_reference(self, image_bgr: np.ndarray) -> FaceAnalysisResult:
+        """Detect a reference face and embed only when exactly one valid face exists."""
+        return self._analyze(image_bgr, reference_only=True)
+
+    def _analyze(self, image_bgr: np.ndarray, *, reference_only: bool) -> FaceAnalysisResult:
         prepared = prepare_working_image(image_bgr, self._max_detection_dimension)
         working_image = prepared.image_bgr
         try:
             detection_result = self.detector.detect(working_image)
-            analyzed: list[FaceEmbedding] = []
-            source_detections: list[FaceDetection] = []
-            for detection in detection_result.detections:
-                # YuNet raw row and SFace input both use the exact same working image.
-                embedding = self.embedder.embed(
-                    working_image, detection, detection_index=detection.detection_index
-                )
-                original_box = self._map_box_to_original(detection, prepared)
-                source_detection = FaceDetection(
+            source_detections = [
+                FaceDetection(
                     raw_row=detection.raw_row,
                     clipped_box=detection.clipped_box,
                     score=detection.score,
                     detection_index=detection.detection_index,
-                    original_box=original_box,
+                    original_box=self._map_box_to_original(detection, prepared),
                 )
-                source_detections.append(source_detection)
+                for detection in detection_result.detections
+            ]
+            if reference_only and (
+                detection_result.rejected_detection_count > 0 or len(source_detections) != 1
+            ):
+                return FaceAnalysisResult(
+                    detections=DetectionResult(
+                        detections=tuple(source_detections),
+                        rejected_detection_count=detection_result.rejected_detection_count,
+                    ),
+                    faces=(),
+                )
+
+            analyzed: list[FaceEmbedding] = []
+            for detection, source_detection in zip(
+                detection_result.detections, source_detections, strict=True
+            ):
+                # YuNet raw row and SFace input both use the exact same working image.
+                embedding = self.embedder.embed(
+                    working_image, detection, detection_index=detection.detection_index
+                )
                 analyzed.append(FaceEmbedding(detection=source_detection, embedding=embedding))
             mapped_result = DetectionResult(
                 detections=tuple(source_detections),

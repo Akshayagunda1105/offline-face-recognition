@@ -50,6 +50,7 @@ class Settings(BaseModel):
     max_annotated_response_bytes: PositiveInt = 25 * 1024 * 1024
     matching_similarity_threshold: float | None = Field(default=None, ge=-1.0, le=1.0)
     matching_ambiguity_margin: float | None = Field(default=None, ge=0.0, le=2.0)
+    experimental_recognition_enabled: bool = False
 
     @model_validator(mode="after")
     def validate_matching_settings_pair(self) -> Settings:
@@ -93,6 +94,7 @@ class Settings(BaseModel):
             "OFFLINE_FACE_MAX_ANNOTATED_RESPONSE_BYTES",
             "OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD",
             "OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN",
+            "OFFLINE_FACE_EXPERIMENTAL_RECOGNITION_ENABLED",
         }
         unknown_names = {
             name
@@ -140,6 +142,9 @@ class Settings(BaseModel):
             ),
             "matching_ambiguity_margin": env.get(
                 "OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN"
+            ),
+            "experimental_recognition_enabled": env.get(
+                "OFFLINE_FACE_EXPERIMENTAL_RECOGNITION_ENABLED", False
             ),
         }
         # Let Pydantic produce the same typed extra-field error used for the

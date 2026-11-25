@@ -19,7 +19,11 @@ from offline_face_recognition.api.schemas import (
     GroupPhotoRecognitionResponse,
     IdentificationResponse,
 )
-from offline_face_recognition.gallery.builder import GalleryBuildError, ReferenceImage
+from offline_face_recognition.gallery.builder import (
+    GalleryBuildError,
+    GalleryValidationFailure,
+    ReferenceImage,
+)
 from offline_face_recognition.gallery.service import GalleryService
 from offline_face_recognition.gallery.session_store import (
     GallerySessionCapacityError,
@@ -88,9 +92,9 @@ async def _processing_slot(request: Request) -> AsyncIterator[None]:
         semaphore.release()
 
 
-async def _run_sync_shielded(function, *args):
+async def _run_sync_shielded(function, *args, **kwargs):
     """Keep the processing slot until an already-started worker thread exits."""
-    task = asyncio.create_task(asyncio.to_thread(function, *args))
+    task = asyncio.create_task(asyncio.to_thread(function, *args, **kwargs))
     try:
         return await asyncio.shield(task)
     except asyncio.CancelledError:
@@ -145,7 +149,26 @@ def _map_gallery_error(exc: Exception) -> HTTPException:
         )
         return HTTPException(
             status_code=status_code,
-            detail={"code": code, "message": str(exc)},
+            detail={
+                "code": code,
+                "message": str(exc),
+                **({"filename": exc.filename} if exc.filename is not None else {}),
+                **(
+                    {
+                        "invalid_image_count": exc.invalid_image_count,
+                        "errors": [
+                            {
+                                "filename": failure.filename,
+                                "code": failure.code,
+                                "message": failure.message,
+                            }
+                            for failure in exc.failures
+                        ],
+                    }
+                    if exc.failures
+                    else {}
+                ),
+            },
         )
     raise exc
 
@@ -182,6 +205,7 @@ async def create_gallery(request: Request) -> GalleryCreateResponse:
     service = _service(request)
     settings = request.app.state.settings
     references: list[ReferenceImage] = []
+    upload_failures: list[GalleryValidationFailure] = []
     aggregate_size = 0
     async with _processing_slot(request):
         async with _multipart_form(request, max_files=settings.max_gallery_identities) as form:
@@ -196,8 +220,25 @@ async def create_gallery(request: Request) -> GalleryCreateResponse:
                     status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail={"code": "too_many_identities", "message": "Gallery exceeds the identity limit"},
                 )
+            if all(upload.size is not None for upload in uploads):
+                declared_total = sum(upload.size or 0 for upload in uploads)
+                if declared_total > settings.max_gallery_upload_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail={"code": "gallery_too_large", "message": "Gallery exceeds the aggregate upload limit"},
+                    )
             try:
                 for upload in uploads:
+                    filename = upload.filename or ""
+                    if upload.size is not None and upload.size > settings.max_upload_bytes:
+                        upload_failures.append(
+                            GalleryValidationFailure(
+                                filename,
+                                "reference_image_too_large",
+                                "Reference image exceeds the individual upload size limit",
+                            )
+                        )
+                        continue
                     remaining = settings.max_gallery_upload_bytes - aggregate_size
                     if remaining <= 0:
                         raise HTTPException(
@@ -205,15 +246,35 @@ async def create_gallery(request: Request) -> GalleryCreateResponse:
                             detail={"code": "gallery_too_large", "message": "Gallery exceeds the aggregate upload limit"},
                         )
                     limit = min(settings.max_upload_bytes, remaining)
-                    content = await _read_upload(upload, limit, limit_code="gallery_too_large")
+                    try:
+                        content = await _read_upload(upload, limit, limit_code="gallery_too_large")
+                    except HTTPException as exc:
+                        if (
+                            limit == settings.max_upload_bytes
+                            and isinstance(exc.detail, dict)
+                            and exc.detail.get("code") == "gallery_too_large"
+                        ):
+                            upload_failures.append(
+                                GalleryValidationFailure(
+                                    filename,
+                                    "reference_image_too_large",
+                                    "Reference image exceeds the individual upload size limit",
+                                )
+                            )
+                            continue
+                        raise
                     aggregate_size += len(content)
-                    references.append(ReferenceImage(upload.filename or "", content))
+                    references.append(ReferenceImage(filename, content))
             finally:
                 # FormData also closes these; close explicitly before CPU inference begins.
                 await asyncio.gather(*(upload.close() for upload in uploads if isinstance(upload, UploadFile)))
 
         try:
-            info = await _run_sync_shielded(service.create_gallery, references)
+            info = await _run_sync_shielded(
+                service.create_gallery,
+                references,
+                validation_failures=upload_failures,
+            )
         except (GalleryBuildError, GallerySessionCapacityError, GallerySessionStoreClosedError) as exc:
             raise _map_gallery_error(exc) from exc
         finally:
@@ -325,12 +386,12 @@ async def recognize_group_photo(request: Request, session_id: str = Depends(_ses
         _service(request).get_gallery_info(session_id)
     except (GallerySessionUnavailableError, GallerySessionStoreClosedError) as exc:
         raise _map_gallery_error(exc) from exc
-    if not runtime.recognition_ready:
+    if not runtime.experimental_recognition_available:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={
                 "code": "recognition_not_ready",
-                "message": "Matching thresholds and ambiguity margin are not validated and configured",
+                "message": "Experimental recognition requires explicit opt-in and both matching thresholds",
             },
         )
 

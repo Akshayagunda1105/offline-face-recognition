@@ -54,8 +54,18 @@ class ModelRuntime:
 
     @property
     def recognition_ready(self) -> bool:
-        # A matching threshold and ambiguity margin have not been calibrated.
+        # Experimental settings do not imply calibration or production readiness.
         return False
+
+    @property
+    def experimental_recognition_available(self) -> bool:
+        """Whether explicitly opted-in, threshold-configured experiments can run."""
+        return (
+            self.readiness.models_ready
+            and self.settings.experimental_recognition_enabled
+            and self.settings.matching_similarity_threshold is not None
+            and self.settings.matching_ambiguity_margin is not None
+        )
 
     def load(self) -> None:
         """Load only the configured local model files; never fetch assets."""

@@ -34,10 +34,14 @@ def test_health_reports_models_ready_but_recognition_not_ready():
         "sface_ready": True,
         "error_code": None,
     }
-    assert recognition.status_code == 503
+    assert recognition.status_code == 200
     assert recognition.json() == {
+        "models_ready": True,
         "recognition_ready": False,
-        "reason": "matching_thresholds_not_calibrated",
+        "experimental_recognition_available": False,
+        "experimental": False,
+        "calibrated": False,
+        "reason": "experimental_opt_in_disabled",
     }
     assert app.state.gallery_service is None
     assert app.state.group_photo_processor is None
@@ -63,7 +67,57 @@ def test_health_reports_missing_models_and_keeps_liveness_available(tmp_path):
         "sface_ready": False,
         "error_code": "model_files_missing",
     }
-    assert recognition.status_code == 503
-    assert recognition.json()["recognition_ready"] is False
+    assert recognition.status_code == 200
+    assert recognition.json() == {
+        "models_ready": False,
+        "recognition_ready": False,
+        "experimental_recognition_available": False,
+        "experimental": False,
+        "calibrated": False,
+        "reason": "models_not_ready",
+    }
     assert app.state.gallery_service is None
     assert app.state.gallery_session_store.active_session_count == 0
+
+
+def test_health_reports_experimental_availability_without_calibration():
+    settings = Settings.from_environment(
+        environ={
+            "OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD": "0.40",
+            "OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN": "0.10",
+            "OFFLINE_FACE_EXPERIMENTAL_RECOGNITION_ENABLED": "true",
+        }
+    )
+    app = create_app(settings)
+    live, models, recognition = _get_health_responses(app)
+
+    assert models.status_code == 200
+    assert recognition.status_code == 200
+    assert recognition.json() == {
+        "models_ready": True,
+        "recognition_ready": False,
+        "experimental_recognition_available": True,
+        "experimental": True,
+        "calibrated": False,
+        "reason": None,
+    }
+    assert app.state.model_runtime.recognition_ready is False
+
+
+def test_health_distinguishes_opt_in_from_missing_threshold_configuration():
+    settings = Settings.from_environment(
+        environ={"OFFLINE_FACE_EXPERIMENTAL_RECOGNITION_ENABLED": "true"}
+    )
+    app = create_app(settings)
+    _, models, recognition = _get_health_responses(app)
+
+    assert models.status_code == 200
+    assert recognition.status_code == 200
+    assert recognition.json() == {
+        "models_ready": True,
+        "recognition_ready": False,
+        "experimental_recognition_available": False,
+        "experimental": True,
+        "calibrated": False,
+        "reason": "matching_thresholds_not_configured",
+    }

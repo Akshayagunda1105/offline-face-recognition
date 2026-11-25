@@ -6,7 +6,11 @@ from collections.abc import Sequence
 
 import numpy as np
 
-from offline_face_recognition.gallery.builder import GalleryBuilder, ReferenceImage
+from offline_face_recognition.gallery.builder import (
+    GalleryBuilder,
+    GalleryValidationFailure,
+    ReferenceImage,
+)
 from offline_face_recognition.gallery.session_store import (
     GallerySessionInfo,
     GallerySessionStore,
@@ -33,8 +37,13 @@ class GalleryService:
         self._session_store = session_store
         self._matcher = matcher
 
-    def create_gallery(self, references: Sequence[ReferenceImage]) -> GallerySessionInfo:
-        return self._builder.build(references)
+    def create_gallery(
+        self,
+        references: Sequence[ReferenceImage],
+        *,
+        validation_failures: Sequence[GalleryValidationFailure] = (),
+    ) -> GallerySessionInfo:
+        return self._builder.build(references, validation_failures=validation_failures)
 
     def get_gallery_info(self, session_id: str) -> GallerySessionInfo:
         return self._session_store.get_info(session_id)

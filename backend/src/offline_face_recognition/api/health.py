@@ -3,7 +3,7 @@
 from typing import Literal
 
 from fastapi import APIRouter, Request, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from offline_face_recognition.models.runtime import ModelRuntime
 
@@ -22,8 +22,20 @@ class ModelReadinessResponse(BaseModel):
 
 
 class RecognitionReadinessResponse(BaseModel):
-    recognition_ready: Literal[False] = False
-    reason: Literal["matching_thresholds_not_calibrated"] = "matching_thresholds_not_calibrated"
+    models_ready: bool = Field(description="Both local face models loaded successfully")
+    recognition_ready: Literal[False] = Field(
+        default=False, description="Calibrated recognition is not enabled by this application"
+    )
+    experimental_recognition_available: bool = Field(
+        description="Models, explicit opt-in, and both matching thresholds are present"
+    )
+    experimental: bool = Field(description="Experimental-recognition opt-in setting is enabled")
+    calibrated: Literal[False] = Field(default=False, description="Experimental decisions are never calibrated")
+    reason: Literal[
+        "models_not_ready",
+        "experimental_opt_in_disabled",
+        "matching_thresholds_not_configured",
+    ] | None = None
 
 
 def _runtime(request: Request) -> ModelRuntime:
@@ -49,6 +61,23 @@ def model_readiness(request: Request, response: Response) -> ModelReadinessRespo
 
 
 @router.get("/health/recognition", response_model=RecognitionReadinessResponse)
-def recognition_readiness(response: Response) -> RecognitionReadinessResponse:
-    response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    return RecognitionReadinessResponse()
+def recognition_readiness(request: Request) -> RecognitionReadinessResponse:
+    runtime = _runtime(request)
+    models_ready = runtime.readiness.models_ready
+    experimental = runtime.settings.experimental_recognition_enabled
+    if runtime.experimental_recognition_available:
+        reason = None
+    elif not models_ready:
+        reason = "models_not_ready"
+    elif not experimental:
+        reason = "experimental_opt_in_disabled"
+    else:
+        reason = "matching_thresholds_not_configured"
+    return RecognitionReadinessResponse(
+        models_ready=models_ready,
+        recognition_ready=False,
+        experimental_recognition_available=runtime.experimental_recognition_available,
+        experimental=experimental,
+        calibrated=False,
+        reason=reason,
+    )

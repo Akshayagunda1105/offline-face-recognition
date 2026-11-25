@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { API_BASE_URL, galleryApi, healthApi } from "./api/client.js";
-import { friendlyError } from "./api/errors.js";
+import { friendlyError, galleryFileFailures } from "./api/errors.js";
 import { inspectGalleryFiles, MAX_GALLERY_IMAGES } from "./gallery/files.js";
 import { inspectGroupPhoto, MAX_GROUP_PHOTO_BYTES } from "./group-photo/file.js";
 import GroupPhotoWorkflow from "./recognition/GroupPhotoWorkflow.jsx";
 import { decodeRecognitionResponse } from "./recognition/response.js";
+import { recognitionAvailabilityMessage } from "./recognition/readiness.js";
+import ExperimentalNotice from "./recognition/ExperimentalNotice.jsx";
+import GalleryFileFailure from "./gallery/GalleryFileFailure.jsx";
 
 const initialChecks = {
   backend: { state: "loading", data: null, error: null },
@@ -161,7 +164,7 @@ export default function App() {
         }
       }
     } catch (error) {
-      setNotice({ tone: "error", text: friendlyError(error) });
+      setNotice({ tone: "error", text: friendlyError(error), galleryFileFailures: galleryFileFailures(error) });
     } finally {
       setBusy(null);
     }
@@ -276,6 +279,7 @@ export default function App() {
             {fileAnalysis.duplicateIdentities.length > 0 ? <div className="selection-message selection-message--error" role="alert"><strong>Duplicate identity labels:</strong>{fileAnalysis.duplicateIdentities.map((duplicate) => <div key={duplicate.label}>{duplicate.filenames.join(" and ")} match identity {duplicate.label}</div>)}<span>Use one reference photo and a unique filename per person.</span></div> : null}
           </div> : null}
           <div className="upload-row"><button className="primary-button" onClick={createGallery} disabled={!canCreate}>{busy === "creating" ? <><span className="button-spinner" /> Building gallery...</> : gallery ? "Create replacement gallery" : "Create gallery"}</button>{selection && fileAnalysis.files.length > 0 ? <button className="text-button" onClick={() => { setSelection(null); setNotice(null); }} disabled={Boolean(busy)}>Clear selection</button> : null}</div>
+          {notice?.galleryFileFailures ? <div className="notice notice--error gallery-upload-notice" role="alert"><StatusDot tone="red" /><GalleryFileFailure report={notice.galleryFileFailures} /><button className="notice-close" aria-label="Dismiss message" onClick={() => setNotice(null)}>x</button></div> : null}
         </div>
 
         <aside className="panel active-panel" aria-live="polite">
@@ -284,15 +288,17 @@ export default function App() {
         </aside>
       </section>
 
-      <GroupPhotoWorkflow selection={groupPhoto} previewUrl={groupPreviewUrl} result={recognitionResult} resultImageUrl={resultImageUrl} hasGallery={Boolean(gallery)} busy={busy} onSelect={onGroupPhotoSelected} onClear={clearGroupPhoto} onRecognize={recognizeGroupPhoto} />
+      <ExperimentalNotice check={recognition} />
+      <GroupPhotoWorkflow selection={groupPhoto} previewUrl={groupPreviewUrl} result={recognitionResult} resultImageUrl={resultImageUrl} hasGallery={Boolean(gallery)} recognitionAvailable={recognition.state === "loaded" && recognition.data?.experimental_recognition_available === true} recognitionUnavailableMessage={recognitionAvailabilityMessage(recognition)} busy={busy} onSelect={onGroupPhotoSelected} onClear={clearGroupPhoto} onRecognize={recognizeGroupPhoto} />
 
-      {notice ? <div className={`notice notice--${notice.tone}`} role={notice.tone === "error" ? "alert" : "status"}><StatusDot tone={notice.tone === "success" ? "green" : notice.tone === "warning" || notice.tone === "info" ? "amber" : "red"} /><span>{notice.text}</span><button className="notice-close" aria-label="Dismiss message" onClick={() => setNotice(null)}>x</button></div> : null}
+      {notice && !notice.galleryFileFailures ? <div className={`notice notice--${notice.tone}`} role={notice.tone === "error" ? "alert" : "status"}><StatusDot tone={notice.tone === "success" ? "green" : notice.tone === "warning" || notice.tone === "info" ? "amber" : "red"} /><span>{notice.text}</span><button className="notice-close" aria-label="Dismiss message" onClick={() => setNotice(null)}>x</button></div> : null}
 
       <section className="system-section" aria-label="Local backend status"><div className="system-heading"><div><div className="step-label">LOCAL SERVICE</div><h2>System status</h2></div><button className="refresh-button" onClick={refreshHealth}><span aria-hidden="true">Refresh</span></button></div><div className="health-grid">
         <StatusTile title="Backend" state={backend.state === "loading" ? "Loading" : backend.state === "error" ? "Unavailable" : backend.data?.status === "alive" ? "Connected" : "Unavailable"} detail={backend.state === "error" ? backend.error : "Local API"} />
         <StatusTile title="Face models" state={models.state === "loading" ? "Loading" : models.state === "error" ? "Unavailable" : models.data?.models_ready ? "Ready" : "Unavailable"} detail={models.state === "error" ? models.error : models.data?.error_code || "YuNet / SFace"} />
-        <StatusTile title="Recognition" state={recognition.state === "loading" ? "Loading" : recognition.state === "error" ? "Unavailable" : recognition.data?.recognition_ready ? "Ready" : "Not ready"} detail={recognition.state === "error" ? recognition.error : recognition.data?.reason || "Policy validation pending"} />
+        <StatusTile title="Recognition" state={recognition.state === "loading" ? "Loading" : recognition.state === "error" ? "Unavailable" : recognition.data?.experimental_recognition_available ? "Experimental" : "Unavailable"} detail={recognition.state === "error" ? recognition.error : recognitionAvailabilityMessage(recognition)} />
       </div><p className="api-address">API <code>{API_BASE_URL}</code></p></section>
+
 
       <footer className="page-footer"><span>Runs locally on this device</span><span>Gallery embeddings are held in backend memory and expire automatically.</span></footer>
     </main>

@@ -69,6 +69,36 @@ def test_missing_local_models_report_not_ready_without_network_fallback(tmp_path
     assert runtime.readiness.sface_ready is False
     assert runtime.readiness.error_code == "model_files_missing"
     assert runtime.recognition_ready is False
+    assert runtime.experimental_recognition_available is False
+
+
+def test_experimental_readiness_requires_models_opt_in_and_both_thresholds(tmp_path):
+    yunet_path = tmp_path / "yunet.onnx"
+    sface_path = tmp_path / "sface.onnx"
+    yunet_path.write_bytes(b"local-test-model")
+    sface_path.write_bytes(b"local-test-model")
+    kwargs = dict(
+        project_root=tmp_path,
+        yunet_model_path=yunet_path,
+        sface_model_path=sface_path,
+    )
+    factories = dict(
+        detector_factory=lambda *_args: object(),
+        recognizer_factory=lambda *_args: object(),
+    )
+
+    cases = [
+        (Settings(**kwargs), False),
+        (Settings(**kwargs, matching_similarity_threshold=0.40, matching_ambiguity_margin=0.10), False),
+        (Settings(**kwargs, experimental_recognition_enabled=True), False),
+        (Settings(**kwargs, matching_similarity_threshold=0.40, matching_ambiguity_margin=0.10, experimental_recognition_enabled=True), True),
+    ]
+    for settings, expected in cases:
+        runtime = ModelRuntime(settings, **factories)
+        runtime.load()
+        assert runtime.readiness.models_ready
+        assert runtime.experimental_recognition_available is expected
+        assert runtime.recognition_ready is False
 
 
 def test_model_load_failure_clears_partial_models(tmp_path):

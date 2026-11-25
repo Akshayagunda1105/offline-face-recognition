@@ -2,11 +2,14 @@ const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 export const API_BASE_URL = (configuredBaseUrl || "http://127.0.0.1:8000").replace(/\/$/, "");
 
 export class ApiError extends Error {
-  constructor(message, { status = null, code = null, retryAfterSeconds = null } = {}) {
+  constructor(message, { status = null, code = null, filename = null, failures = null, invalidImageCount = null, retryAfterSeconds = null } = {}) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.filename = filename;
+    this.failures = failures;
+    this.invalidImageCount = invalidImageCount;
     this.retryAfterSeconds = retryAfterSeconds;
   }
 }
@@ -43,6 +46,11 @@ async function requestJson(path, { method = "GET", sessionId, body, allowUnavail
       {
         status: response.status,
         code: detail?.code || null,
+        filename: typeof detail?.filename === "string" ? detail.filename : null,
+        failures: Array.isArray(detail?.errors)
+          ? detail.errors.filter((item) => item && typeof item.filename === "string" && typeof item.code === "string" && typeof item.message === "string")
+          : null,
+        invalidImageCount: Number.isInteger(detail?.invalid_image_count) ? detail.invalid_image_count : null,
         retryAfterSeconds: parseRetryAfter(response.headers.get("Retry-After")),
       },
     );

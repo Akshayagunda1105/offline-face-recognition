@@ -8,7 +8,12 @@ from offline_face_recognition.core.config import Settings
 from offline_face_recognition.faces.detection import DetectionResult, FaceDetection
 from offline_face_recognition.faces.embedding import EmbeddingGenerationError
 from offline_face_recognition.faces.engine import FaceAnalysisResult, FaceEmbedding
-from offline_face_recognition.gallery.builder import GalleryBuildError, GalleryBuilder, ReferenceImage
+from offline_face_recognition.gallery.builder import (
+    GalleryBuildError,
+    GalleryBuilder,
+    GalleryValidationFailure,
+    ReferenceImage,
+)
 from offline_face_recognition.gallery.session_store import GallerySessionStore
 
 
@@ -59,6 +64,9 @@ class FakeEngine:
             return output
         return _analysis()
 
+    def analyze_reference(self, image):
+        return self.analyze(image)
+
 
 def _builder(engine, settings=None):
     active_settings = settings or _settings()
@@ -103,6 +111,7 @@ def test_invalid_reference_face_analysis_is_rejected(analysis, code):
         builder.build([ReferenceImage("One.png", _png_bytes())])
 
     assert error.value.code == code
+    assert error.value.filename == "One.png"
     assert store.active_session_count == 0
 
 
@@ -122,17 +131,23 @@ def test_decode_and_embedding_failures_abort_gallery_without_publishing_a_sessio
     with pytest.raises(GalleryBuildError) as error:
         builder.build([ReferenceImage("Broken.png", b"not an image")])
     assert error.value.code == "invalid_reference_image"
+    assert error.value.filename == "Broken.png"
     assert store.active_session_count == 0
 
 
-def test_duplicate_identity_is_rejected_before_face_processing():
+def test_duplicate_identity_files_are_reported_and_skipped_before_face_processing():
     engine = FakeEngine()
     builder, store = _builder(engine)
 
     with pytest.raises(GalleryBuildError) as error:
-        builder.build([ReferenceImage("Akshaya.jpg", _png_bytes()), ReferenceImage("akshaya.png", _png_bytes())])
+        builder.build([ReferenceImage("Akshaya.png", _png_bytes()), ReferenceImage("akshaya.png", _png_bytes())])
 
-    assert error.value.code == "duplicate_identity"
+    assert error.value.code == "gallery_validation_failed"
+    assert error.value.invalid_image_count == 2
+    assert {(failure.filename, failure.code) for failure in error.value.failures} == {
+        ("Akshaya.png", "duplicate_identity"),
+        ("akshaya.png", "duplicate_identity"),
+    }
     assert engine.calls == []
     assert store.active_session_count == 0
 
@@ -155,6 +170,68 @@ def test_identity_and_aggregate_byte_limits_are_checked_before_processing():
     assert error.value.code == "gallery_too_large"
     assert engine.calls == []
     assert limited_store.active_session_count == 0
+
+
+def test_all_basic_reference_errors_are_collected_before_face_model_processing():
+    engine = FakeEngine()
+    builder, store = _builder(engine)
+    references = [
+        ReferenceImage("Valid.png", _png_bytes()),
+        ReferenceImage("VALID.png", _png_bytes()),
+        ReferenceImage(".jpg", b"corrupt"),
+        ReferenceImage("Corrupt.png", b"not an image"),
+    ]
+
+    with pytest.raises(GalleryBuildError) as error:
+        builder.build(references)
+
+    assert error.value.code == "gallery_validation_failed"
+    assert error.value.invalid_image_count == 4
+    assert {(failure.filename, failure.code) for failure in error.value.failures} == {
+        ("Valid.png", "duplicate_identity"),
+        ("VALID.png", "duplicate_identity"),
+        (".jpg", "invalid_identity"),
+        (".jpg", "invalid_reference_image"),
+        ("Corrupt.png", "invalid_reference_image"),
+    }
+    assert engine.calls == []
+    assert store.active_session_count == 0
+
+
+def test_all_face_validation_errors_abort_transaction_and_preserve_existing_gallery():
+    engine = FakeEngine([_analysis(count=2), _analysis(count=0), _analysis()])
+    builder, store = _builder(engine)
+    existing = store.create({"existing": ("Existing", np.eye(1, 128, 0, dtype=np.float32)[0])})
+
+    with pytest.raises(GalleryBuildError) as error:
+        builder.build(
+            [
+                ReferenceImage("Corrupt.png", b"not an image"),
+                ReferenceImage("Many.png", _png_bytes()),
+                ReferenceImage("None.png", _png_bytes()),
+                ReferenceImage("Valid.png", _png_bytes()),
+            ],
+            validation_failures=[
+                GalleryValidationFailure(
+                    "Oversized.jpg",
+                    "reference_image_too_large",
+                    "Reference image exceeds the individual upload size limit",
+                )
+            ],
+        )
+
+    assert error.value.code == "gallery_validation_failed"
+    assert error.value.invalid_image_count == 4
+    assert [(failure.filename, failure.code) for failure in error.value.failures] == [
+        ("Oversized.jpg", "reference_image_too_large"),
+        ("Corrupt.png", "invalid_reference_image"),
+        ("Many.png", "multiple_faces"),
+        ("None.png", "zero_faces"),
+    ]
+    assert len(engine.calls) == 3
+    assert store.active_session_count == 1
+    assert store.get_info(existing.session_id) == existing
+    store.close()
 
 
 def test_gallery_supports_exactly_configured_maximum_of_50_identities():

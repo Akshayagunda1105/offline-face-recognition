@@ -7,6 +7,8 @@ export default function GroupPhotoWorkflow({
   result,
   resultImageUrl,
   hasGallery,
+  recognitionAvailable,
+  recognitionUnavailableMessage,
   busy,
   onSelect,
   onClear,
@@ -37,10 +39,11 @@ export default function GroupPhotoWorkflow({
             </div>
           ) : <p className="picker-help">The original image is previewed locally and is not changed.</p>}
 
-          <button className="primary-button recognize-button" onClick={onRecognize} disabled={!selection?.valid || !hasGallery || Boolean(busy)}>
+          <button className="primary-button recognize-button" onClick={onRecognize} disabled={!selection?.valid || !hasGallery || !recognitionAvailable || Boolean(busy)}>
             {busy === "recognizing" ? <><span className="button-spinner" /> Uploading and processing…</> : "Recognize group photo"}
           </button>
           {!hasGallery ? <p className="inline-guidance">Create a reference gallery before starting recognition.</p> : null}
+          {!recognitionAvailable ? <p className="inline-guidance" role="status">{recognitionUnavailableMessage}</p> : null}
         </div>
 
         <div className="original-preview-card">

@@ -11,6 +11,10 @@ let api;
 let decodeRecognitionResponse;
 let RecognitionResults;
 let friendlyError;
+let GroupPhotoWorkflow;
+let ExperimentalNotice;
+let galleryFileFailures;
+let GalleryFileFailure;
 
 before(async () => {
   vite = await createServer({ server: { middlewareMode: true }, appType: "custom" });
@@ -18,6 +22,10 @@ before(async () => {
   ({ decodeRecognitionResponse } = await vite.ssrLoadModule("/src/recognition/response.js"));
   ({ default: RecognitionResults } = await vite.ssrLoadModule("/src/recognition/RecognitionResults.jsx"));
   ({ friendlyError } = await vite.ssrLoadModule("/src/api/errors.js"));
+  ({ default: GroupPhotoWorkflow } = await vite.ssrLoadModule("/src/recognition/GroupPhotoWorkflow.jsx"));
+  ({ default: ExperimentalNotice } = await vite.ssrLoadModule("/src/recognition/ExperimentalNotice.jsx"));
+  ({ galleryFileFailures } = await vite.ssrLoadModule("/src/api/errors.js"));
+  ({ default: GalleryFileFailure } = await vite.ssrLoadModule("/src/gallery/GalleryFileFailure.jsx"));
 });
 
 after(async () => { await vite?.close(); });
@@ -78,7 +86,7 @@ test("maps backend failures to user-facing messages without exposing policy scor
   const invalid = friendlyError(new api.ApiError("invalid", { status: 422, code: "invalid_group_photo" }));
   const large = friendlyError(new api.ApiError("large", { status: 413, code: "group_photo_too_large" }));
   const busy = friendlyError(new api.ApiError("busy", { status: 503, code: "processing_busy", retryAfterSeconds: 2 }));
-  assert.match(readiness, /disabled.*uncalibrated/iu);
+  assert.match(readiness, /unavailable.*uncalibrated/iu);
   assert.match(expired, /expired.*backend restart/iu);
   assert.match(invalid, /corrupted|extension/iu);
   assert.match(large, /20 MiB/iu);
@@ -103,6 +111,91 @@ test("renders the explicit zero-face state", () => {
   const markup = renderToStaticMarkup(RecognitionResults({ result, imageUrl: "blob:test-image" }));
   assert.match(markup, /No faces detected in this photo\./);
   assert.match(markup, /<strong>0<\/strong> faces/);
+});
+
+test("experimental status is warned about and gates the recognition action", () => {
+  const warning = renderToStaticMarkup(ExperimentalNotice({
+    check: { state: "loaded", data: { experimental: true, calibrated: false } },
+  }));
+  assert.match(warning, /Experimental recognition — not calibrated/u);
+  assert.match(warning, /local evaluation only/u);
+
+  const blocked = renderToStaticMarkup(GroupPhotoWorkflow({
+    selection: { valid: true, file: { name: "group.jpg", size: 10 } },
+    hasGallery: true,
+    recognitionAvailable: false,
+    recognitionUnavailableMessage: "Experimental recognition is disabled in backend configuration.",
+    busy: null,
+  }));
+  assert.match(blocked, /disabled in backend configuration/u);
+  assert.match(blocked, /<button class="primary-button recognize-button" disabled="">Recognize group photo/u);
+
+  const available = renderToStaticMarkup(GroupPhotoWorkflow({
+    selection: { valid: true, file: { name: "group.jpg", size: 10 } },
+    hasGallery: true,
+    recognitionAvailable: true,
+    recognitionUnavailableMessage: "Experimental mode enabled.",
+    busy: null,
+  }));
+  assert.match(available, /Recognize group photo/u);
+  assert.doesNotMatch(available, /recognitionUnavailableMessage/u);
+});
+
+test("gallery upload errors preserve and render every failed filename, reason, and total", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => Response.json({
+    detail: {
+      code: "gallery_validation_failed",
+      message: "3 reference image(s) failed validation",
+      invalid_image_count: 3,
+      errors: [
+        { filename: "Family.png", code: "multiple_faces", message: "More than one face was detected" },
+        { filename: "NoFace.jpg", code: "zero_faces", message: "No face was detected" },
+        { filename: "Broken.webp", code: "invalid_reference_image", message: "Image could not be decoded" },
+      ],
+    },
+  }, { status: 422 }));
+
+  let caught;
+  await assert.rejects(
+    api.galleryApi.create([
+      new File(["a"], "Family.png", { type: "image/png" }),
+      new File(["b"], "NoFace.jpg", { type: "image/jpeg" }),
+      new File(["c"], "Broken.webp", { type: "image/webp" }),
+    ]),
+    (error) => {
+      caught = error;
+      return error instanceof api.ApiError && error.code === "gallery_validation_failed" &&
+        error.invalidImageCount === 3 && error.failures.length === 3;
+    },
+  );
+  const report = galleryFileFailures(caught);
+  assert.deepEqual(report, {
+    invalidImageCount: 3,
+    failures: [
+      { filename: "Family.png", code: "multiple_faces", reason: "More than one face was detected.", fix: "Choose a reference photo containing exactly one face." },
+      { filename: "NoFace.jpg", code: "zero_faces", reason: "No face was detected in this image.", fix: "Choose a clear reference photo in which one face is visible." },
+      { filename: "Broken.webp", code: "invalid_reference_image", reason: "The image is corrupted, unsupported, or its contents do not match its file extension.", fix: "Use a valid single-frame JPG, JPEG, PNG, or WebP image with the matching extension." },
+    ],
+  });
+  const markup = renderToStaticMarkup(GalleryFileFailure({ report }));
+  assert.match(markup, /3 invalid images/u);
+  for (const filename of ["Family.png", "NoFace.jpg", "Broken.webp"]) assert.match(markup, new RegExp(filename.replaceAll(".", "\\."), "u"));
+  assert.match(markup, /Reason: More than one face was detected/u);
+  assert.match(markup, /Reason: No face was detected in this image/u);
+  assert.match(markup, /Reason: The image is corrupted/u);
+
+  for (const [code, filename] of [
+    ["zero_faces", "NoFace.jpg"],
+    ["invalid_reference_image", "Broken.webp"],
+    ["reference_image_too_large", "Large.jpg"],
+    ["duplicate_identity", "alex.png"],
+    ["invalid_identity", ".jpg"],
+  ]) {
+    const single = galleryFileFailures(new api.ApiError("validation", { code, filename }));
+    assert.equal(single.failures[0].filename, filename);
+    assert.ok(single.failures[0].fix.length > 0);
+  }
+  t.mock.restoreAll();
 });
 
 test("rejects malformed success payloads instead of displaying incomplete results", () => {

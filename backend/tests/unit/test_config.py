@@ -60,6 +60,7 @@ def test_relative_model_overrides_resolve_from_configured_project_root(tmp_path)
             "OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN": "2.1",
         },
         {"OFFLINE_FACE_UNSUPPORTED_SETTING": "value"},
+        {"OFFLINE_FACE_EXPERIMENTAL_RECOGNITION_ENABLED": "sometimes"},
     ],
 )
 def test_invalid_or_unknown_settings_are_rejected(env):
@@ -75,6 +76,7 @@ def test_provisional_yunet_settings_are_the_approved_values():
     assert settings.detection_top_k == 5000
     assert settings.matching_similarity_threshold is None
     assert settings.matching_ambiguity_margin is None
+    assert settings.experimental_recognition_enabled is False
 
 
 def test_image_limits_have_configurable_defaults_and_environment_overrides():
@@ -111,6 +113,7 @@ def test_gallery_session_and_threshold_defaults_and_overrides():
     assert defaults.max_annotated_response_bytes == 25 * 1024 * 1024
     assert defaults.matching_similarity_threshold is None
     assert defaults.matching_ambiguity_margin is None
+    assert defaults.experimental_recognition_enabled is False
 
     configured = Settings.from_environment(
         environ={
@@ -122,6 +125,7 @@ def test_gallery_session_and_threshold_defaults_and_overrides():
             "OFFLINE_FACE_MAX_ANNOTATED_RESPONSE_BYTES": "1048576",
             "OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD": "0.61",
             "OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN": "0.12",
+            "OFFLINE_FACE_EXPERIMENTAL_RECOGNITION_ENABLED": "true",
         }
     )
     assert configured.max_gallery_identities == 25
@@ -132,3 +136,4 @@ def test_gallery_session_and_threshold_defaults_and_overrides():
     assert configured.max_annotated_response_bytes == 1_048_576
     assert configured.matching_similarity_threshold == 0.61
     assert configured.matching_ambiguity_margin == 0.12
+    assert configured.experimental_recognition_enabled is True
