@@ -6,7 +6,11 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from offline_face_recognition.annotation.image_annotator import Annotation, ImageAnnotator
+from offline_face_recognition.annotation.image_annotator import (
+    Annotation,
+    AnnotationStatus,
+    ImageAnnotator,
+)
 from offline_face_recognition.annotation.image_annotator import ImageAnnotationError
 from offline_face_recognition.core.config import Settings
 from offline_face_recognition.faces.engine import FaceAnalysisEngine
@@ -131,6 +135,11 @@ class GroupPhotoProcessor:
                     detection_index=result.detection_index,
                     box=result.box,
                     label=result.identity_label or MatchStatus.UNKNOWN.value,
+                    status=(
+                        AnnotationStatus.KNOWN
+                        if result.status is MatchStatus.KNOWN
+                        else AnnotationStatus.UNKNOWN
+                    ),
                 )
                 for result in identifications
             )

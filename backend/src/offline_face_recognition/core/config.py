@@ -6,12 +6,18 @@ import os
 from collections.abc import Mapping
 from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt, model_validator
 
 
 def repository_root() -> Path:
     """Return the repository root independently of the process working directory."""
     return Path(__file__).resolve().parents[4]
+
+
+def backend_root() -> Path:
+    """Return the backend package root independently of the process working directory."""
+    return Path(__file__).resolve().parents[3]
 
 
 def _resolve_configured_path(value: str | Path | None, *, root: Path, default: Path) -> Path:
@@ -72,8 +78,16 @@ class Settings(BaseModel):
 
     @classmethod
     def from_environment(cls, environ: Mapping[str, str] | None = None) -> Settings:
-        """Build settings from the explicitly supported environment variables."""
-        env = os.environ if environ is None else environ
+        """Build settings from process variables and, by default, backend/.env.
+
+        Existing process variables take precedence over values in the local file.
+        An explicitly supplied mapping is used as-is and never triggers dotenv loading.
+        """
+        if environ is None:
+            load_dotenv(dotenv_path=backend_root() / ".env", override=False)
+            env = os.environ
+        else:
+            env = environ
         supported_names = {
             "OFFLINE_FACE_PROJECT_ROOT",
             "OFFLINE_FACE_YUNET_MODEL",

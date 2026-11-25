@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Sequence
 
 import cv2
 import numpy as np
+
+
+class AnnotationStatus(StrEnum):
+    KNOWN = "Known"
+    UNKNOWN = "Unknown"
 
 
 @dataclass(frozen=True)
@@ -14,6 +20,7 @@ class Annotation:
     detection_index: int
     box: tuple[float, float, float, float]
     label: str
+    status: AnnotationStatus = AnnotationStatus.KNOWN
 
 
 class ImageAnnotationError(ValueError):
@@ -36,8 +43,11 @@ class ImageAnnotator:
 
         output = image_bgr.copy()
         height, width = output.shape[:2]
-        green = (0, 220, 0)
-        white = (255, 255, 255)
+        colors = {
+            AnnotationStatus.KNOWN: (0, 255, 0),
+            AnnotationStatus.UNKNOWN: (0, 0, 255),
+        }
+        black = (0, 0, 0)
         for annotation in annotations:
             if annotation.detection_index < 0 or not annotation.label:
                 raise ImageAnnotationError("Annotation index and label must be valid")
@@ -49,7 +59,8 @@ class ImageAnnotator:
             top = max(0, min(height - 1, int(np.floor(y))))
             right = max(left, min(width - 1, int(np.ceil(x + box_width))))
             bottom = max(top, min(height - 1, int(np.ceil(y + box_height))))
-            cv2.rectangle(output, (left, top), (right, bottom), green, 2)
+            color = colors[annotation.status]
+            cv2.rectangle(output, (left, top), (right, bottom), color, 2)
 
             text = annotation.label.replace("\n", " ").replace("\r", " ")
             (text_width, text_height), baseline = cv2.getTextSize(
@@ -58,14 +69,14 @@ class ImageAnnotator:
             label_top = max(0, top - text_height - baseline - 6)
             label_bottom = min(height - 1, label_top + text_height + baseline + 6)
             label_right = min(width - 1, left + text_width + 8)
-            cv2.rectangle(output, (left, label_top), (label_right, label_bottom), green, -1)
+            cv2.rectangle(output, (left, label_top), (label_right, label_bottom), color, -1)
             cv2.putText(
                 output,
                 text,
                 (left + 4, min(label_bottom - baseline - 2, label_top + text_height + 2)),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.55,
-                white,
+                black,
                 1,
                 cv2.LINE_AA,
             )

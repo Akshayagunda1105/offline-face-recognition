@@ -1,9 +1,94 @@
+import os
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
+import offline_face_recognition.core.config as config_module
 from offline_face_recognition.core.config import Settings, repository_root
+
+
+def _point_config_at_temp_backend(monkeypatch, backend_dir: Path):
+    config_path = (
+        backend_dir / "src" / "offline_face_recognition" / "core" / "config.py"
+    )
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(config_module, "__file__", str(config_path))
+
+
+def _clear_offline_face_environment(monkeypatch):
+    for name in tuple(os.environ):
+        if name.startswith("OFFLINE_FACE_"):
+            monkeypatch.delenv(name)
+
+
+def test_dotenv_is_loaded_from_backend_root_and_defaults_experimental_mode_off(
+    monkeypatch, tmp_path
+):
+    _clear_offline_face_environment(monkeypatch)
+    backend_dir = tmp_path / "backend"
+    backend_dir.mkdir()
+    (backend_dir / ".env").write_text(
+        "OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD=0.40\n"
+        "OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN=0.10\n"
+        "OFFLINE_FACE_EXPERIMENTAL_RECOGNITION_ENABLED=false\n",
+        encoding="utf-8",
+    )
+    _point_config_at_temp_backend(monkeypatch, backend_dir)
+
+    settings = Settings.from_environment()
+
+    assert settings.matching_similarity_threshold == 0.40
+    assert settings.matching_ambiguity_margin == 0.10
+    assert settings.experimental_recognition_enabled is False
+
+
+def test_process_environment_overrides_dotenv_values(monkeypatch, tmp_path):
+    _clear_offline_face_environment(monkeypatch)
+    backend_dir = tmp_path / "backend"
+    backend_dir.mkdir()
+    (backend_dir / ".env").write_text(
+        "OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD=0.40\n"
+        "OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN=0.10\n"
+        "OFFLINE_FACE_EXPERIMENTAL_RECOGNITION_ENABLED=false\n",
+        encoding="utf-8",
+    )
+    _point_config_at_temp_backend(monkeypatch, backend_dir)
+    monkeypatch.setenv("OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD", "0.55")
+    monkeypatch.setenv("OFFLINE_FACE_EXPERIMENTAL_RECOGNITION_ENABLED", "true")
+
+    settings = Settings.from_environment()
+
+    assert settings.matching_similarity_threshold == 0.55
+    assert settings.matching_ambiguity_margin == 0.10
+    assert settings.experimental_recognition_enabled is True
+
+
+def test_explicit_environment_mapping_does_not_load_dotenv(monkeypatch, tmp_path):
+    _clear_offline_face_environment(monkeypatch)
+    backend_dir = tmp_path / "backend"
+    backend_dir.mkdir()
+    (backend_dir / ".env").write_text(
+        "OFFLINE_FACE_MATCHING_SIMILARITY_THRESHOLD=0.40\n"
+        "OFFLINE_FACE_MATCHING_AMBIGUITY_MARGIN=0.10\n"
+        "OFFLINE_FACE_EXPERIMENTAL_RECOGNITION_ENABLED=true\n",
+        encoding="utf-8",
+    )
+    _point_config_at_temp_backend(monkeypatch, backend_dir)
+
+    settings = Settings.from_environment(environ={})
+
+    assert settings.matching_similarity_threshold is None
+    assert settings.matching_ambiguity_margin is None
+    assert settings.experimental_recognition_enabled is False
+
+
+def test_fresh_environment_keeps_experimental_recognition_disabled():
+    settings = Settings.from_environment(environ={})
+
+    assert settings.experimental_recognition_enabled is False
+    assert settings.matching_similarity_threshold is None
+    assert settings.matching_ambiguity_margin is None
 
 
 def test_default_model_paths_are_repo_relative_not_cwd_relative(monkeypatch, tmp_path):
